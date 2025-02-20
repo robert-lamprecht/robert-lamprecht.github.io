@@ -1,0 +1,152 @@
+:root {
+    --matrix-green: #00FF41;
+    --matrix-dark: #0D0208;
+    --matrix-light: #003B00;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: black;
+    color: var(--matrix-green);
+    font-family: monospace;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+#intro-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1;
+    transition: opacity 2s ease-in-out;
+}
+
+#intro-quote {
+    text-align: left;
+    max-width: 800px;
+    padding: 2rem;
+}
+
+#quote-text {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    border-right: 2px solid var(--matrix-green);
+    animation: blinkCursor 0.75s step-end infinite;
+}
+
+#quote-author {
+    font-size: 1.2rem;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+    animation-delay: 7s;
+}
+
+#matrix-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 2s ease-in-out;
+}
+
+nav {
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 1rem;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+    animation: fadeInDown 1s forwards;
+    animation-delay: 9s;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+
+nav a {
+    color: var(--matrix-green);
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s;
+}
+
+nav a:hover {
+    color: #fff;
+    text-shadow: 0 0 10px var(--matrix-green);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 80px auto 0;
+    padding: 2rem;
+}
+
+.hero {
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    opacity: 0;
+    animation: fadeIn 2s forwards;
+    animation-delay: 8s;
+}
+
+h1 {
+    font-size: 3rem;
+    margin: 0;
+    padding: 0;
+    text-shadow: 0 0 10px var(--matrix-green);
+}
+
+.subtitle {
+    font-size: 1.5rem;
+    margin-top: 1rem;
+}
+
+.command-prompt::before {
+    content: "> ";
+    color: var(--matrix-green);
+}
+
+@keyframes blinkCursor {
+    from, to { border-color: transparent }
+    50% { border-color: var(--matrix-green); }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
