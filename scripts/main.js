@@ -1,5 +1,5 @@
 // Typewriter effect
-const quote = "Knock, knock, Neo.";
+const quote = "Knock, Knock, Neo.";
 let charIndex = 0;
 let isAddingNewDrops = true;
 let animationInterval;
@@ -37,7 +37,7 @@ function startMatrixTransition() {
     // Stop adding new drops after 5 seconds
     setTimeout(() => {
         isAddingNewDrops = false;
-    }, 5000);
+    }, 10000);
 }
 
 // Matrix rain effect
