@@ -37,7 +37,7 @@ function startMatrixTransition() {
     // Stop adding new drops after 5 seconds
     setTimeout(() => {
         isAddingNewDrops = false;
-    }, 20000);
+    }, 10000);
 }
 
 // Matrix rain effect
