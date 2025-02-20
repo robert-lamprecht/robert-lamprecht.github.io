@@ -42,6 +42,8 @@ body {
     white-space: pre-wrap;
     border-right: 2px solid var(--matrix-green);
     animation: blinkCursor 0.75s step-end infinite;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 #quote-author {
@@ -125,9 +127,16 @@ h1 {
     margin-top: 1rem;
 }
 
+.command-prompt {
+    display: flex;
+    align-items: center;
+}
+
 .command-prompt::before {
     content: "> ";
     color: var(--matrix-green);
+    display: inline-block;
+    vertical-align: middle;
 }
 
 @keyframes blinkCursor {
