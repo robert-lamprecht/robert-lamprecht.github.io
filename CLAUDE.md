@@ -51,12 +51,13 @@ contradicts it without flagging the conflict explicitly.
 | Decision | Value |
 |---|---|
 | Colin auto-credit | OFF (`colinAutoCredit: false`). Buying Colin a drink scores for the buyer only. |
-| Scoring floor | None. Below −3 keeps dropping (5th drink = −4, 6th = −5, uncapped). |
+| Scoring floor | None. Below −3 keeps dropping (5th drink = −4, 6th = −5, uncapped). Inactive holes score 0. |
 | Penalty attribution | Every penalty records who filed it (`byPlayerId`, `byName`). |
 | False filing | Quorum void → auto +1 on filer. Host can override. falseFiling not quorum-disputable. |
-| Identity | UUID in `localStorage`. Names are display labels only. |
+| Identity | UUID in `localStorage`. Verified on load against Firestore. |
 | Offline | Firestore persistence enabled. Writes queue and sync when connection returns. |
 | Host designation | Matched at join via `CONFIG.hostCode`. |
+| Dispute visibility | Publicly listed in Penalty tab to allow voting. |
 
 ---
 

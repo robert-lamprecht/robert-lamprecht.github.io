@@ -16,7 +16,20 @@ const App = (() => {
 
   let _pendingName   = null;
   let _pendingIsHost = false;
-  let _pendingReturn = null;   // existing player doc, set when name conflict found
+  let _pendingReturn = null;
+
+  // ── localStorage helpers ──────────────────────────────────────────────────────
+
+  function saveLocalPlayer(id, name, isHost, isColin) {
+    localStorage.setItem('playerId',   id);
+    localStorage.setItem('playerName', name);
+    localStorage.setItem('isHost',     String(isHost));
+    localStorage.setItem('isColin',    String(isColin));
+  }
+
+  function clearLocalPlayer() {
+    ['playerId', 'playerName', 'isHost', 'isColin'].forEach(k => localStorage.removeItem(k));
+  }
 
   // ── View routing ─────────────────────────────────────────────────────────────
 
@@ -34,7 +47,6 @@ const App = (() => {
       tab.classList.toggle('active', tab.dataset.view === name);
     });
 
-    // Per-view hooks
     if (name === 'penalty' && typeof Penalty !== 'undefined') Penalty.onShow();
   }
 
@@ -51,22 +63,58 @@ const App = (() => {
 
   // ── Join flow ─────────────────────────────────────────────────────────────────
 
-  function initJoin() {
-    // Returning player — already stored locally, skip landing entirely
-    const savedId = localStorage.getItem('playerId');
-    if (savedId) {
-      state.playerId   = savedId;
-      state.playerName = localStorage.getItem('playerName') || '';
-      state.isHost     = localStorage.getItem('isHost') === 'true';
-      state.isColin    = localStorage.getItem('isColin') === 'true';
-      afterJoin();
-      return;
+  async function initJoin() {
+    // ?reset in URL → clear localStorage and force landing (useful for recovery/testing)
+    if (new URLSearchParams(location.search).has('reset')) {
+      clearLocalPlayer();
+      history.replaceState(null, '', location.pathname);
     }
 
+    const savedId = localStorage.getItem('playerId');
+
+    if (savedId) {
+      // Verify the saved player doc still exists in Firestore before auto-joining.
+      // Handles stale test data, schema changes, and host resets.
+      try {
+        const snap = await DB.playerRef(savedId).get();
+        if (snap.exists) {
+          const data = snap.data();
+          state.playerId   = savedId;
+          state.playerName = data.name                              || localStorage.getItem('playerName') || '';
+          state.isHost     = data.isHost  ?? (localStorage.getItem('isHost')  === 'true');
+          state.isColin    = data.isColin ?? (localStorage.getItem('isColin') === 'true');
+          // Keep localStorage in sync with Firestore truth
+          saveLocalPlayer(savedId, state.playerName, state.isHost, state.isColin);
+          afterJoin();
+          return;
+        }
+        // Doc not found — player was reset or never created. Clear + show landing.
+        clearLocalPlayer();
+        Animations.showToast('Session expired — please rejoin.', 'info');
+      } catch (e) {
+        if (!navigator.onLine) {
+          // Offline: trust localStorage optimistically
+          state.playerId   = savedId;
+          state.playerName = localStorage.getItem('playerName') || '';
+          state.isHost     = localStorage.getItem('isHost')  === 'true';
+          state.isColin    = localStorage.getItem('isColin') === 'true';
+          afterJoin();
+          return;
+        }
+        // Online error: something unexpected — fall through to landing
+        clearLocalPlayer();
+      }
+    }
+
+    showLanding();
+  }
+
+  function showLanding() {
+    // Landing is already visible in the initial HTML — just wire up events
     Animations.landingEntrance();
 
-    // ── Host toggle — reveal host-code input inline ───────────────────────────
     let _hostMode = false;
+
     document.getElementById('host-btn').addEventListener('click', () => {
       _hostMode = !_hostMode;
       document.getElementById('host-code-wrap').hidden = !_hostMode;
@@ -74,18 +122,13 @@ const App = (() => {
       if (_hostMode) document.getElementById('input-host')?.focus();
     });
 
-    // ── Primary join (Enter key or Join button) ───────────────────────────────
     document.getElementById('join-form').addEventListener('submit', e => {
       e.preventDefault();
       handleJoin(false);
     });
 
-    // ── Host confirm ─────────────────────────────────────────────────────────
-    document.getElementById('host-confirm-btn').addEventListener('click', () => {
-      handleJoin(true);
-    });
+    document.getElementById('host-confirm-btn').addEventListener('click', () => handleJoin(true));
 
-    // ── Name-conflict modal buttons ───────────────────────────────────────────
     document.getElementById('conflict-return-btn').addEventListener('click', () => {
       if (_pendingReturn) joinAsReturning(_pendingReturn);
     });
@@ -108,8 +151,7 @@ const App = (() => {
 
     if (isHost) {
       const hostInput = document.getElementById('input-host');
-      const code = hostInput?.value.trim() || '';
-      if (code !== CONFIG.hostCode) {
+      if ((hostInput?.value.trim() || '') !== CONFIG.hostCode) {
         Animations.shake(hostInput);
         Animations.showToast('Wrong host code.', 'error');
         return;
@@ -119,8 +161,8 @@ const App = (() => {
     _pendingName   = name;
     _pendingIsHost = isHost;
 
-    // Check for an existing player with this name (case-insensitive, full roster read —
-    // tiny list for a party game, no index needed)
+    // Check for an existing player with this name (case-insensitive full roster read —
+    // fine for a party game with < 20 players)
     try {
       const snap = await DB.playersRef().get();
       const existing = snap.docs
@@ -135,7 +177,7 @@ const App = (() => {
       }
     } catch (e) {
       console.error('Name check error:', e);
-      await joinAsNew(name, isHost);  // fall back to fresh join on read error
+      await joinAsNew(name, isHost);
     }
   }
 
@@ -148,13 +190,7 @@ const App = (() => {
     const holes = {};
     CONFIG.holes.forEach(h => { holes[h.n] = scoring.emptyHole(); });
 
-    const playerData = {
-      name,
-      isColin,
-      isHost,
-      joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      holes,
-    };
+    const playerData = { name, isColin, isHost, joinedAt: firebase.firestore.FieldValue.serverTimestamp(), holes };
 
     try {
       await DB.sessionRef().set(
@@ -163,11 +199,7 @@ const App = (() => {
       );
       await DB.playerRef(playerId).set(playerData);
 
-      localStorage.setItem('playerId',   playerId);
-      localStorage.setItem('playerName', name);
-      localStorage.setItem('isHost',     String(isHost));
-      localStorage.setItem('isColin',    String(isColin));
-
+      saveLocalPlayer(playerId, name, isHost, isColin);
       state.playerId   = playerId;
       state.playerName = name;
       state.isHost     = isHost;
@@ -182,17 +214,16 @@ const App = (() => {
 
   function joinAsReturning(existingPlayer) {
     hideConflict();
-
-    localStorage.setItem('playerId',   existingPlayer.id);
-    localStorage.setItem('playerName', existingPlayer.name);
-    localStorage.setItem('isHost',     String(existingPlayer.isHost  ?? false));
-    localStorage.setItem('isColin',    String(existingPlayer.isColin ?? false));
-
+    saveLocalPlayer(
+      existingPlayer.id,
+      existingPlayer.name,
+      existingPlayer.isHost  ?? false,
+      existingPlayer.isColin ?? false
+    );
     state.playerId   = existingPlayer.id;
     state.playerName = existingPlayer.name;
     state.isHost     = existingPlayer.isHost  ?? false;
     state.isColin    = existingPlayer.isColin ?? false;
-
     afterJoin();
   }
 
@@ -202,19 +233,13 @@ const App = (() => {
     document.getElementById('conflict-name-display').textContent = name;
     const el = document.getElementById('name-conflict');
     el.hidden = false;
-    gsap.fromTo(el,
-      { opacity: 0, y: 20 },
-      { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' }
-    );
+    gsap.fromTo(el, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.28, ease: 'power2.out' });
   }
 
   function hideConflict() {
     const el = document.getElementById('name-conflict');
     if (el.hidden) return;
-    gsap.to(el, {
-      opacity: 0, y: 10, duration: 0.18, ease: 'power2.in',
-      onComplete: () => { el.hidden = true; },
-    });
+    gsap.to(el, { opacity: 0, y: 10, duration: 0.18, ease: 'power2.in', onComplete: () => { el.hidden = true; } });
     _pendingReturn = null;
   }
 
@@ -236,7 +261,7 @@ const App = (() => {
 
   function init() {
     initNav();
-    initJoin();
+    initJoin();   // async — returns a promise we don't need to await
   }
 
   return { init, state, showView };
