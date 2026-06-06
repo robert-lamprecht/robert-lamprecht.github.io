@@ -83,7 +83,7 @@ const Penalty = (() => {
     if (!grid) return;
     grid.innerHTML = '';
 
-    CONFIG.holes.forEach(h => {
+    App.allHoles().forEach(h => {
       const btn = document.createElement('button');
       btn.className = 'hole-btn';
       btn.innerHTML = `
@@ -142,13 +142,14 @@ const Penalty = (() => {
     if (!_targetPlayerId || !_selectedHole || !_selectedFoul) return;
 
     const penalty = {
-      id:         crypto.randomUUID(),
-      type:       _selectedFoul,
-      byPlayerId: _state.playerId,
-      byName:     _state.playerName,
-      at:         new Date().toISOString(),   // serverTimestamp() can't be inside arrayUnion
-      status:     'active',
-      disputes:   [],
+      id:           crypto.randomUUID(),
+      type:         _selectedFoul,
+      byPlayerId:   _state.playerId,
+      byName:       _state.playerName,
+      at:           new Date().toISOString(),
+      status:       'active',
+      disputed:     false,     // true when a player disputes — host then approves/denies
+      disputeDenied: false,    // true when host denies — prevents re-disputing
     };
 
     const btn = document.getElementById('penalty-confirm-btn');
@@ -178,7 +179,8 @@ const Penalty = (() => {
     goToStep(1);
   }
 
-  // ── Dispute handling (called from scorecard.js renderPenalties) ──────────────
+  // ── Dispute handling — flags the penalty for host review ─────────────────────
+  // No quorum. Host sees it in the panel and approves (void) or denies (keep).
 
   async function openDispute(targetPlayerId, holeN, penaltyId) {
     if (!CONFIG.disputesEnabled) {
@@ -187,12 +189,11 @@ const Penalty = (() => {
     }
 
     try {
-      // Read the player doc (holes are a map field, not a subcollection)
       const snap = await DB.playerRef(targetPlayerId).get();
       if (!snap.exists) return;
 
       const holeData  = snap.data()?.holes?.[holeN] || {};
-      const penalties = JSON.parse(JSON.stringify(holeData.penalties || [])); // deep clone
+      const penalties = JSON.parse(JSON.stringify(holeData.penalties || []));
       const idx       = penalties.findIndex(p => p.id === penaltyId);
       if (idx === -1) return;
 
@@ -202,74 +203,32 @@ const Penalty = (() => {
         Animations.showToast('This penalty is already resolved.', 'info');
         return;
       }
-
-      // Filer can't retroactively dispute their own filing
+      if (penalty.disputed) {
+        Animations.showToast('Dispute already filed — waiting on the host.', 'info');
+        return;
+      }
+      if (penalty.disputeDenied) {
+        Animations.showToast('Host already reviewed this one — penalty stands.', 'info');
+        return;
+      }
       if (penalty.byPlayerId === _state.playerId) {
         Animations.showToast("You can't dispute your own filing.", 'info');
         return;
       }
 
-      // Already voted?
-      if (penalty.disputes.some(d => d.byPlayerId === _state.playerId)) {
-        Animations.showToast('You already agreed to this dispute.', 'info');
-        return;
-      }
+      // Mark as disputed; the host will see it in their panel
+      penalties[idx].disputed   = true;
+      penalties[idx].disputedBy = {
+        playerId: _state.playerId,
+        name:     _state.playerName,
+        at:       new Date().toISOString(),
+      };
 
-      // Add this player's agreement
-      penalties[idx].disputes.push({
-        byPlayerId: _state.playerId,
-        byName:     _state.playerName,
-        at:         new Date().toISOString(),
+      await DB.playerRef(targetPlayerId).update({
+        [`holes.${holeN}.penalties`]: penalties,
       });
 
-      // Count distinct non-filer voters
-      const distinctVoters = new Set(
-        penalties[idx].disputes
-          .filter(d => d.byPlayerId !== penalty.byPlayerId)
-          .map(d => d.byPlayerId)
-      );
-
-      if (distinctVoters.size >= CONFIG.disputeQuorum) {
-        // ── Quorum reached: void the penalty ────────────────────────────────
-        penalties[idx].status = 'voided';
-
-        // False-filing penalty on the filer
-        const falsePenalty = {
-          id:         crypto.randomUUID(),
-          type:       'falseFiling',
-          byPlayerId: 'system',
-          byName:     'System',
-          at:         new Date().toISOString(),
-          status:     'active',
-          disputes:   [],   // falseFiling is NOT disputable by quorum
-        };
-
-        const batch = DB.db.batch();
-        // Overwrite the voided penalties array on target's player doc
-        batch.update(DB.playerRef(targetPlayerId), {
-          [`holes.${holeN}.penalties`]: penalties,
-        });
-        // Append falseFiling to the original filer's player doc
-        batch.update(DB.playerRef(penalty.byPlayerId), {
-          [`holes.${holeN}.penalties`]: firebase.firestore.FieldValue.arrayUnion(falsePenalty),
-        });
-        await batch.commit();
-
-        Animations.showToast(
-          `🚩 Penalty voided! ${penalty.byName} gets a false-filing penalty.`,
-          'info'
-        );
-      } else {
-        // ── Partial vote: just persist the updated disputes array ────────────
-        await DB.playerRef(targetPlayerId).update({
-          [`holes.${holeN}.penalties`]: penalties,
-        });
-        const remaining = CONFIG.disputeQuorum - distinctVoters.size;
-        Animations.showToast(
-          `Dispute logged. ${remaining} more agreement${remaining > 1 ? 's' : ''} needed.`,
-          'info'
-        );
-      }
+      Animations.showToast('Dispute filed — the host will review it.', 'info');
     } catch (e) {
       console.error('Dispute error:', e);
       Animations.showToast('Dispute failed — check connection.', 'error');

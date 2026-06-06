@@ -575,6 +575,22 @@ body {
   color: var(--gray-mid);
 }
 
+.badge--pending {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(255,200,80,0.15);
+  color: var(--gold);
+}
+
+.badge--denied {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: rgba(255,100,80,0.15);
+  color: #ff9980;
+}
+
 .dispute-btn {
   font-size: 11px;
   height: 28px;
@@ -894,6 +910,24 @@ body {
 
 .host-panel .btn { margin-bottom: 10px; width: 100%; }
 
+/* Host panel sections */
+.host-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.host-section:last-of-type { border-bottom: none; }
+
+.host-section-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+/* Host penalty / dispute items */
 .host-penalty-list {
   margin-top: 20px;
   display: flex;
@@ -916,7 +950,40 @@ body {
 .hp-who { font-weight: 700; color: var(--cream); }
 .hp-hole { color: var(--gold); font-weight: 600; }
 .hp-type { color: #ffb3b3; flex: 1; }
-.hp-by   { color: var(--gray-mid); font-size: 11px; }
+.hp-by   { color: var(--gray-mid); font-size: 11px; width: 100%; }
+
+.hp-actions { display: flex; gap: 6px; margin-left: auto; }
+
+/* Host player list */
+.host-player-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.host-player-item {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--green-fairway);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.badge-host {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: var(--gold);
+  color: var(--green-deep);
+  font-weight: 700;
+  vertical-align: middle;
+  margin-left: 6px;
+}
 
 .host-empty {
   font-size: 13px;

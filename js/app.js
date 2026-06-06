@@ -5,12 +5,18 @@ const App = (() => {
   // ── Shared state ─────────────────────────────────────────────────────────────
 
   const state = {
-    playerId:   null,
-    playerName: null,
-    isHost:     false,
-    isColin:    false,
+    playerId:    null,
+    playerName:  null,
+    isHost:      false,
+    isColin:     false,
+    customHoles: [],   // extra holes added by host at runtime (beyond CONFIG.holes)
     unsubscribers: [],
   };
+
+  // Returns CONFIG holes + any runtime holes added by the host, sorted by hole number.
+  function allHoles() {
+    return [...CONFIG.holes, ...state.customHoles].sort((a, b) => a.n - b.n);
+  }
 
   // ── Pending join (lives across the name-conflict modal interaction) ───────────
 
@@ -187,8 +193,13 @@ const App = (() => {
     const playerId = crypto.randomUUID();
     const isColin  = name.toLowerCase() === CONFIG.colinName.toLowerCase();
 
+    // Include any holes already added by the host before this player joined
+    const sessionSnap = await DB.sessionRef().get();
+    const existingCustom = sessionSnap.exists ? (sessionSnap.data().customHoles || []) : [];
+
     const holes = {};
     CONFIG.holes.forEach(h => { holes[h.n] = scoring.emptyHole(); });
+    existingCustom.forEach(h => { holes[h.n] = scoring.emptyHole(); });
 
     const playerData = { name, isColin, isHost, joinedAt: firebase.firestore.FieldValue.serverTimestamp(), holes };
 
@@ -264,7 +275,7 @@ const App = (() => {
     initJoin();   // async — returns a promise we don't need to await
   }
 
-  return { init, state, showView };
+  return { init, state, showView, allHoles };
 })();
 
 // Boot

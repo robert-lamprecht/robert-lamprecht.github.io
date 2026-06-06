@@ -123,10 +123,46 @@
   <!-- ── Host Panel (overlay, host-only) ──────────────────────────────────── -->
   <div id="host-panel" class="host-panel" hidden>
     <h2 class="host-title">⚑ Host Controls</h2>
-    <button id="host-reset-btn"  class="btn btn-ghost btn-sm">Reset Round</button>
-    <button id="host-lock-btn"   class="btn btn-danger btn-sm">Lock Final Scores</button>
-    <div id="host-penalties"     class="host-penalty-list"></div>
-    <button id="host-close-btn"  class="btn btn-ghost btn-sm">Close</button>
+
+    <!-- Round controls -->
+    <div class="host-section">
+      <button id="host-reset-btn" class="btn btn-ghost btn-sm">Reset Round</button>
+      <button id="host-lock-btn"  class="btn btn-danger btn-sm">Lock Final Scores</button>
+    </div>
+
+    <!-- Pending disputes — host approves or denies -->
+    <div class="host-section">
+      <h3 class="host-section-title">⚖️ Pending Disputes</h3>
+      <div id="host-disputes" class="host-penalty-list"></div>
+    </div>
+
+    <!-- All active penalties — host can void directly -->
+    <div class="host-section">
+      <h3 class="host-section-title">📋 Active Penalties</h3>
+      <div id="host-penalties" class="host-penalty-list"></div>
+    </div>
+
+    <!-- Player roster — host can remove -->
+    <div class="host-section">
+      <h3 class="host-section-title">👤 Players</h3>
+      <div id="host-players" class="host-player-list"></div>
+    </div>
+
+    <!-- Add a hole at runtime -->
+    <div class="host-section">
+      <h3 class="host-section-title">⛳ Add Hole</h3>
+      <div class="field-wrap">
+        <label for="host-new-bar">Bar name</label>
+        <input id="host-new-bar" type="text" placeholder="e.g. Ladybird Grove" maxlength="40" autocomplete="off">
+      </div>
+      <div class="field-wrap">
+        <label for="host-new-sig">Signature challenge</label>
+        <input id="host-new-sig" type="text" placeholder="e.g. Order a mezcal anything" maxlength="60" autocomplete="off">
+      </div>
+      <button id="host-add-hole-btn" class="btn btn-gold btn-sm">+ Add Hole</button>
+    </div>
+
+    <button id="host-close-btn" class="btn btn-ghost btn-sm" style="margin-top:16px">Close</button>
   </div>
 
   <!-- ── Toast container ──────────────────────────────────────────────────── -->

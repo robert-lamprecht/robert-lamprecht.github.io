@@ -29,7 +29,12 @@ const Scoreboard = (() => {
   function listenToSession() {
     DB.sessionRef().onSnapshot(snap => {
       if (!snap.exists) return;
-      const { status } = snap.data();
+      const data = snap.data();
+      const { status } = data;
+
+      // Keep shared custom holes state current so App.allHoles() is accurate
+      App.state.customHoles = data.customHoles || [];
+
       if (status === 'final') {
         // Show winner reveal after a tick so scoreboard has rendered
         setTimeout(() => {
@@ -67,8 +72,8 @@ const Scoreboard = (() => {
       row.className = `scoreboard-row ${isMe ? 'scoreboard-row--me' : ''} ${isColin ? 'scoreboard-row--colin' : ''}`;
       row.dataset.id = player.id;
 
-      // Per-hole mini scores
-      const holeScores = CONFIG.holes.map(h => {
+      // Per-hole mini scores — includes custom holes added at runtime
+      const holeScores = App.allHoles().map(h => {
         const hd = player.holes?.[h.n];
         if (!hd) return '<span class="mini-score mini-score--empty">—</span>';
         const s = scoring.holeScore(hd);

@@ -6,10 +6,11 @@
 
 const Scorecard = (() => {
 
-  let _state       = null;
-  let _holeData    = {};      // { 1: holeDoc, 2: holeDoc, ... } local cache
-  let _unsubs      = [];
-  let _initialized = false;   // true after the first snapshot — prevents spurious toasts on load
+  let _state          = null;
+  let _holeData       = {};      // { 1: holeDoc, 2: holeDoc, ... } local cache
+  let _unsubs         = [];
+  let _initialized    = false;   // true after the first snapshot — prevents spurious toasts on load
+  let _renderedHoleNs = new Set(); // hole numbers that have a built card
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ const Scorecard = (() => {
     _state = state;
     buildCards();
     listenToPlayer();
+    listenToSession();
   }
 
   // ── Build static hole cards ──────────────────────────────────────────────────
@@ -24,86 +26,122 @@ const Scorecard = (() => {
   function buildCards() {
     const container = document.getElementById('hole-cards');
     container.innerHTML = '';
+    _renderedHoleNs.clear();
 
     CONFIG.holes.forEach(hole => {
+      _renderedHoleNs.add(hole.n);
       const card = document.createElement('div');
       card.className = 'hole-card';
       card.id        = `hole-card-${hole.n}`;
-      card.innerHTML = `
-        <div class="hole-header">
-          <span class="hole-number">Hole ${hole.n}</span>
-          <span class="hole-bar">${hole.bar}</span>
-          <span class="hole-score-badge" id="score-badge-${hole.n}">Par</span>
-        </div>
-        <p class="hole-signature">★ ${hole.signature}</p>
-
-        <div class="drink-row">
-          <span class="drink-label">Drinks</span>
-          <div class="counter">
-            <button class="counter-btn counter-minus" data-hole="${hole.n}" data-field="drinks" aria-label="Remove drink">−</button>
-            <span class="counter-val" id="drinks-val-${hole.n}">0</span>
-            <button class="counter-btn counter-plus"  data-hole="${hole.n}" data-field="drinks" aria-label="Add drink">+</button>
-          </div>
-        </div>
-
-        <div class="drink-row">
-          <button class="btn btn-gold btn-sm btn-block" data-hole="${hole.n}" data-action="colin">
-            🍺 Buy Colin a drink
-          </button>
-          <span class="colin-count" id="colin-val-${hole.n}" hidden>×0</span>
-        </div>
-
-        <div class="bonus-row">
-          <span class="bonus-label">Bonuses</span>
-          <div class="bonus-chips" id="bonuses-${hole.n}">
-            ${CONFIG.bonusTypes.map(b => `
-              <button class="chip chip--bonus" data-hole="${hole.n}" data-bonus="${b}">
-                ${CONFIG.bonusLabels[b]}
-              </button>
-            `).join('')}
-          </div>
-        </div>
-
-        <div class="penalty-row" id="penalties-${hole.n}">
-          <!-- Incoming penalties rendered here -->
-        </div>
-      `;
+      card.innerHTML = buildCardHTML(hole);
       container.appendChild(card);
     });
 
     Animations.staggerIn(document.querySelectorAll('.hole-card'), 0.1);
-    bindCardEvents();
+    // Bind events for all CONFIG holes at once
+    CONFIG.holes.forEach(hole => bindCardForHole(hole.n));
   }
 
-  // ── Event binding ────────────────────────────────────────────────────────────
+  // ── Card HTML template (shared by buildCards + appendCard) ───────────────────
 
-  function bindCardEvents() {
-    // Drink +/−
-    document.querySelectorAll('.counter-btn').forEach(btn => {
+  function buildCardHTML(hole) {
+    return `
+      <div class="hole-header">
+        <span class="hole-number">Hole ${hole.n}</span>
+        <span class="hole-bar">${hole.bar}</span>
+        <span class="hole-score-badge" id="score-badge-${hole.n}">Par</span>
+      </div>
+      ${hole.signature ? `<p class="hole-signature">★ ${hole.signature}</p>` : ''}
+
+      <div class="drink-row">
+        <span class="drink-label">Drinks</span>
+        <div class="counter">
+          <button class="counter-btn counter-minus" data-hole="${hole.n}" data-field="drinks" aria-label="Remove drink">−</button>
+          <span class="counter-val" id="drinks-val-${hole.n}">0</span>
+          <button class="counter-btn counter-plus"  data-hole="${hole.n}" data-field="drinks" aria-label="Add drink">+</button>
+        </div>
+      </div>
+
+      <div class="drink-row">
+        <button class="btn btn-gold btn-sm btn-block" data-hole="${hole.n}" data-action="colin">
+          🍺 Buy Colin a drink
+        </button>
+        <span class="colin-count" id="colin-val-${hole.n}" hidden>×0</span>
+      </div>
+
+      <div class="bonus-row">
+        <span class="bonus-label">Bonuses</span>
+        <div class="bonus-chips" id="bonuses-${hole.n}">
+          ${CONFIG.bonusTypes.map(b => `
+            <button class="chip chip--bonus" data-hole="${hole.n}" data-bonus="${b}">
+              ${CONFIG.bonusLabels[b]}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="penalty-row" id="penalties-${hole.n}">
+        <!-- Incoming penalties rendered here -->
+      </div>
+    `;
+  }
+
+  // ── Event binding — scoped to a single hole card ─────────────────────────────
+
+  function bindCardForHole(n) {
+    const card = document.getElementById(`hole-card-${n}`);
+    if (!card) return;
+
+    card.querySelectorAll('.counter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        const n     = Number(btn.dataset.hole);
         const field = btn.dataset.field;
         const delta = btn.classList.contains('counter-plus') ? 1 : -1;
         incrementField(n, field, delta);
       });
     });
 
-    // Buy Colin a drink
-    document.querySelectorAll('[data-action="colin"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const n = Number(btn.dataset.hole);
-        incrementField(n, 'colinDrinks', 1);
-      });
-    });
+    const colinBtn = card.querySelector('[data-action="colin"]');
+    if (colinBtn) colinBtn.addEventListener('click', () => incrementField(n, 'colinDrinks', 1));
 
-    // Bonus chips
-    document.querySelectorAll('.chip--bonus').forEach(chip => {
-      chip.addEventListener('click', () => {
-        const n     = Number(chip.dataset.hole);
-        const bonus = chip.dataset.bonus;
-        toggleBonus(n, bonus, chip);
+    card.querySelectorAll('.chip--bonus').forEach(chip => {
+      chip.addEventListener('click', () => toggleBonus(n, chip.dataset.bonus, chip));
+    });
+  }
+
+  // ── Session listener — watch for new holes added by host ─────────────────────
+
+  function listenToSession() {
+    const unsub = DB.sessionRef().onSnapshot(snap => {
+      if (!snap.exists) return;
+      const customHoles = snap.data().customHoles || [];
+
+      // Update shared state so allHoles() is current everywhere
+      App.state.customHoles = customHoles;
+
+      // Append a card for each hole not yet rendered
+      customHoles.forEach(hole => {
+        if (!_renderedHoleNs.has(hole.n)) {
+          appendCard(hole);
+          _renderedHoleNs.add(hole.n);
+        }
       });
     });
+    _unsubs.push(unsub);
+  }
+
+  // Append a single hole card for a dynamically-added hole
+  function appendCard(hole) {
+    const container = document.getElementById('hole-cards');
+    const card = document.createElement('div');
+    card.className = 'hole-card';
+    card.id        = `hole-card-${hole.n}`;
+    card.innerHTML = buildCardHTML(hole);
+    container.appendChild(card);
+    bindCardForHole(hole.n);
+    Animations.staggerIn([card]);
+
+    // Render immediately with any data already cached
+    if (_holeData[hole.n]) renderHole(hole.n, _holeData[hole.n]);
   }
 
   // ── Firestore writes — use dot-notation on the player doc ────────────────────
@@ -146,9 +184,16 @@ const Scorecard = (() => {
 
       const { holes = {} } = snap.data();
 
-      CONFIG.holes.forEach(hole => {
-        const prev = _holeData[hole.n];
-        const curr = holes[hole.n] || scoring.emptyHole();
+      // Process all holes present in the player doc (CONFIG + any custom ones added at runtime)
+      const allNs = new Set([
+        ...CONFIG.holes.map(h => h.n),
+        ...Object.keys(holes).map(Number),
+      ]);
+
+      allNs.forEach(n => {
+        const hole = { n };   // minimal stub — renderHole only needs the hole number
+        const prev = _holeData[n];
+        const curr = holes[n] || scoring.emptyHole();
 
         // ── Detect new incoming penalties and fire toast + shake ────────────
         if (_initialized && prev) {
@@ -159,17 +204,16 @@ const Scorecard = (() => {
           newActive.forEach(p => {
             const label = CONFIG.penaltyLabels[p.type] || p.type;
             Animations.showToast(`🚩 Penalty: ${label} (by ${p.byName})`, 'error');
-            // Animate the new penalty row after the DOM updates
             setTimeout(() => {
-              const rows = document.querySelectorAll(`#penalties-${hole.n} .penalty-row-item`);
+              const rows = document.querySelectorAll(`#penalties-${n} .penalty-row-item`);
               const last = rows[rows.length - 1];
               if (last) Animations.penaltyShakeIn(last);
             }, 60);
           });
         }
 
-        _holeData[hole.n] = curr;
-        renderHole(hole.n, curr);
+        _holeData[n] = curr;
+        renderHole(n, curr);
       });
 
       _initialized = true;
@@ -223,24 +267,35 @@ const Scorecard = (() => {
     container.innerHTML = '';
 
     penalties.forEach(p => {
+      const isActive = p.status === 'active';
+      const isVoided = p.status === 'voided';
+
+      // Determine what action/badge to show on the right
+      let actionHTML = '';
+      if (isVoided) {
+        actionHTML = '<span class="badge badge--voided">Voided</span>';
+      } else if (isActive && p.disputed) {
+        actionHTML = '<span class="badge badge--pending">⏳ Host reviewing</span>';
+      } else if (isActive && p.disputeDenied) {
+        actionHTML = '<span class="badge badge--denied">✗ Stands</span>';
+      } else if (isActive && CONFIG.disputesEnabled) {
+        actionHTML = `<button class="btn btn-ghost btn-xs dispute-btn" data-penalty-id="${p.id}" data-hole="${holeN}">Dispute</button>`;
+      }
+
       const row = document.createElement('div');
-      row.className = `penalty-row-item ${p.status === 'voided' ? 'penalty-row-item--voided' : ''}`;
+      row.className = `penalty-row-item ${isVoided ? 'penalty-row-item--voided' : ''}`;
       row.innerHTML = `
         <span class="penalty-type">${CONFIG.penaltyLabels[p.type] || p.type}</span>
         <span class="penalty-by">filed by ${p.byName || 'unknown'}</span>
-        ${p.status === 'active' && CONFIG.disputesEnabled
-          ? `<button class="btn btn-ghost btn-xs dispute-btn" data-penalty-id="${p.id}" data-hole="${holeN}">Dispute</button>`
-          : ''}
-        ${p.status === 'voided' ? '<span class="badge badge--voided">Voided</span>' : ''}
+        ${actionHTML}
       `;
       container.appendChild(row);
     });
 
-    // Bind dispute buttons
     container.querySelectorAll('.dispute-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        Penalty.openDispute(_state.playerId, btn.dataset.hole, btn.dataset.penaltyId);
-      });
+      btn.addEventListener('click', () =>
+        Penalty.openDispute(_state.playerId, btn.dataset.hole, btn.dataset.penaltyId)
+      );
     });
   }
 
