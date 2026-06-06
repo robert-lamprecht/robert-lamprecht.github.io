@@ -22,22 +22,36 @@
       <h1 class="landing-title">Clynch<br>Bar Crawl<br>Golf</h1>
       <p class="landing-subtitle">5 holes · Atlanta Beltline · Lowest score wins</p>
 
-      <form id="join-form" class="join-form" novalidate>
+      <form id="join-form" novalidate>
         <div class="field-wrap">
           <label for="input-name">Your name</label>
           <input id="input-name" type="text" placeholder="e.g. Robert" autocomplete="off" maxlength="24" required>
         </div>
-        <div class="field-wrap">
-          <label for="input-code">Course code</label>
-          <input id="input-code" type="text" placeholder="Enter code" autocomplete="off" maxlength="20" required>
-          <p class="field-error" id="code-error" hidden>Wrong code — try again.</p>
+        <div class="join-actions">
+          <button type="submit" class="btn btn-primary btn-lg" id="join-btn">Join →</button>
+          <button type="button" class="btn btn-ghost btn-lg"  id="host-btn">Host</button>
         </div>
-        <div class="field-wrap">
-          <label for="input-host">Host code <span class="optional">(optional)</span></label>
-          <input id="input-host" type="text" placeholder="Host only" autocomplete="off" maxlength="30">
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg">Tee off →</button>
       </form>
+
+      <!-- Host code — revealed when Host is toggled -->
+      <div id="host-code-wrap" class="host-code-section" hidden>
+        <div class="field-wrap">
+          <label for="input-host">Host code</label>
+          <input id="input-host" type="password" placeholder="Enter host code" autocomplete="off" maxlength="30">
+        </div>
+        <button type="button" class="btn btn-gold btn-lg btn-block" id="host-confirm-btn">Confirm as Host →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Name conflict overlay ──────────────────────────────────────────────── -->
+  <div id="name-conflict" class="name-conflict-overlay" hidden>
+    <div class="name-conflict-inner">
+      <p class="conflict-heading"><span id="conflict-name-display"></span> is already in the game</p>
+      <p class="conflict-sub">Are you rejoining, or is there a different one?</p>
+      <button id="conflict-return-btn" class="btn btn-primary btn-lg btn-block">↩ I'm back — resume my score</button>
+      <button id="conflict-new-btn"    class="btn btn-ghost   btn-lg btn-block">+ Different person, start fresh</button>
+      <button id="conflict-cancel-btn" class="btn-link">← Back</button>
     </div>
   </div>
 

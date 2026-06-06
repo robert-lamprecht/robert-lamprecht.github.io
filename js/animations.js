@@ -102,7 +102,7 @@ const Animations = (() => {
       .from(title, { y: -20, opacity: 0, duration: 0.45, ease: 'power2.out' }, '-=0.1')
       .from(sub,   { y: 12,  opacity: 0, duration: 0.35, ease: 'power2.out' }, '-=0.1')
       .from('.field-wrap', { y: 16, opacity: 0, stagger: 0.1, duration: 0.35, ease: 'power2.out' }, '-=0.1')
-      .from('.btn-primary', { scale: 0.9, opacity: 0, duration: 0.3, ease: 'back.out(2)' }, '-=0.05');
+      .from('.join-actions', { y: 12, opacity: 0, duration: 0.3, ease: 'back.out(1.5)' }, '-=0.05');
     return tl;
   }
 

@@ -149,7 +149,6 @@ body {
 }
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
-.join-form { text-align: left; }
 
 .field-wrap {
   margin-bottom: 20px;
@@ -200,6 +199,87 @@ body {
   color: var(--red-light);
   margin-top: 6px;
 }
+
+/* Two-button join row */
+.join-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.join-actions .btn-primary { flex: 2; }
+.join-actions .btn-ghost   { flex: 1; }
+
+/* Host button active state (when host-code section is revealed) */
+.btn--active {
+  background: rgba(201,154,46,0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Revealed host-code section */
+.host-code-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--green-fairway);
+}
+
+.host-code-section .field-wrap { margin-bottom: 12px; }
+
+/* ── Name-conflict overlay ───────────────────────────────────────────────── */
+.name-conflict-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  background: rgba(10, 28, 18, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+.name-conflict-inner {
+  width: 100%;
+  max-width: 360px;
+  background: var(--green-deep);
+  border: 1px solid var(--green-fairway);
+  border-radius: var(--radius-xl);
+  padding: 28px 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conflict-heading {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cream);
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+.conflict-sub {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gray-mid);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+/* Small text link (Back button in conflict modal) */
+.btn-link {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--gray-mid);
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: center;
+  align-self: center;
+}
+.btn-link:hover { color: var(--cream); }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
 .btn {
