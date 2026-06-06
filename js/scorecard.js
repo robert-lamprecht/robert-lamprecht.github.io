@@ -1,18 +1,22 @@
 // ─── scorecard.js — personal scorecard view ───────────────────────────────────
+//
+// Schema note: holes are stored as a map on the player document:
+//   players/{playerId}.holes = { "1": holeData, "2": holeData, ... }
+// All reads/writes go through DB.playerRef() with dot-notation field paths.
 
 const Scorecard = (() => {
 
-  let _state = null;
-  let _holeData = {};   // { 1: holeDoc, 2: holeDoc, ... }
-  let _unsubs  = [];
+  let _state       = null;
+  let _holeData    = {};      // { 1: holeDoc, 2: holeDoc, ... } local cache
+  let _unsubs      = [];
+  let _initialized = false;   // true after the first snapshot — prevents spurious toasts on load
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
   function init(state) {
     _state = state;
     buildCards();
-    listenToHoles();
-    listenForIncomingPenalties();
+    listenToPlayer();
   }
 
   // ── Build static hole cards ──────────────────────────────────────────────────
@@ -102,7 +106,7 @@ const Scorecard = (() => {
     });
   }
 
-  // ── Firestore writes ─────────────────────────────────────────────────────────
+  // ── Firestore writes — use dot-notation on the player doc ────────────────────
 
   async function incrementField(holeN, field, delta) {
     const current = _holeData[holeN]?.[field] ?? 0;
@@ -110,8 +114,8 @@ const Scorecard = (() => {
     if (next === current) return;
 
     try {
-      await DB.holeRef(_state.playerId, holeN).update({
-        [field]: next,
+      await DB.playerRef(_state.playerId).update({
+        [`holes.${holeN}.${field}`]: next,
       });
     } catch (e) {
       console.error('Write error:', e);
@@ -122,8 +126,8 @@ const Scorecard = (() => {
   async function toggleBonus(holeN, bonusKey, chipEl) {
     const current = _holeData[holeN]?.bonuses?.[bonusKey] ?? false;
     try {
-      await DB.holeRef(_state.playerId, holeN).update({
-        [`bonuses.${bonusKey}`]: !current,
+      await DB.playerRef(_state.playerId).update({
+        [`holes.${holeN}.bonuses.${bonusKey}`]: !current,
       });
       Animations.scoreBounce(chipEl);
     } catch (e) {
@@ -131,26 +135,48 @@ const Scorecard = (() => {
     }
   }
 
-  // ── Firestore listeners ──────────────────────────────────────────────────────
+  // ── Firestore listener — single snapshot on the player doc ──────────────────
+  //
+  // Because holes are a map field on the player document, any hole update triggers
+  // this listener immediately — no subcollection polling needed.
 
-  function listenToHoles() {
-    CONFIG.holes.forEach(hole => {
-      const unsub = DB.holeRef(_state.playerId, hole.n).onSnapshot(snap => {
-        if (!snap.exists) return;
-        const data = snap.data();
-        _holeData[hole.n] = data;
-        renderHole(hole.n, data);
-        renderRunningTotal();
+  function listenToPlayer() {
+    const unsub = DB.playerRef(_state.playerId).onSnapshot(snap => {
+      if (!snap.exists) return;
+
+      const { holes = {} } = snap.data();
+
+      CONFIG.holes.forEach(hole => {
+        const prev = _holeData[hole.n];
+        const curr = holes[hole.n] || scoring.emptyHole();
+
+        // ── Detect new incoming penalties and fire toast + shake ────────────
+        if (_initialized && prev) {
+          const prevIds = new Set((prev.penalties || []).map(p => p.id));
+          const newActive = (curr.penalties || []).filter(
+            p => p.status === 'active' && !prevIds.has(p.id)
+          );
+          newActive.forEach(p => {
+            const label = CONFIG.penaltyLabels[p.type] || p.type;
+            Animations.showToast(`🚩 Penalty: ${label} (by ${p.byName})`, 'error');
+            // Animate the new penalty row after the DOM updates
+            setTimeout(() => {
+              const rows = document.querySelectorAll(`#penalties-${hole.n} .penalty-row-item`);
+              const last = rows[rows.length - 1];
+              if (last) Animations.penaltyShakeIn(last);
+            }, 60);
+          });
+        }
+
+        _holeData[hole.n] = curr;
+        renderHole(hole.n, curr);
       });
-      _unsubs.push(unsub);
-    });
-  }
 
-  // Watch own player doc for incoming penalties
-  function listenForIncomingPenalties() {
-    CONFIG.holes.forEach(hole => {
-      // Already captured in listenToHoles — penalties are on the hole doc
+      _initialized = true;
+      renderRunningTotal();
     });
+
+    _unsubs.push(unsub);
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────────
@@ -179,8 +205,8 @@ const Scorecard = (() => {
     });
 
     // Score badge
-    const hScore   = scoring.holeScore(data);
-    const badgeEl  = document.getElementById(`score-badge-${n}`);
+    const hScore  = scoring.holeScore(data);
+    const badgeEl = document.getElementById(`score-badge-${n}`);
     if (badgeEl) {
       Animations.badgeCrossFade(badgeEl, CONFIG.scoreTerm(hScore));
       badgeEl.dataset.score = hScore;
@@ -227,7 +253,7 @@ const Scorecard = (() => {
   }
 
   function scoreBadgeClass(score) {
-    if (score >= 2) return 'badge--double-bogey';
+    if (score >= 2)  return 'badge--double-bogey';
     if (score === 1) return 'badge--bogey';
     if (score === 0) return 'badge--par';
     if (score === -1) return 'badge--birdie';

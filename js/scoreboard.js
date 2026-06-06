@@ -15,24 +15,11 @@ const Scoreboard = (() => {
   // ── Firestore listener ───────────────────────────────────────────────────────
 
   function listenToPlayers() {
-    // Listen to all players in the session
-    _unsub = DB.playersRef().onSnapshot(async snap => {
-      // For each player, we need their hole data to compute scores.
-      // Fetch holes for all players in parallel.
-      const playerDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-      const withHoles = await Promise.all(
-        playerDocs.map(async player => {
-          const holesSnap = await DB.holesRef(player.id).get();
-          const holes = {};
-          holesSnap.forEach(hDoc => {
-            holes[Number(hDoc.id)] = hDoc.data();
-          });
-          return { ...player, holes };
-        })
-      );
-
-      _players = scoring.rankPlayers(withHoles);
+    // Holes are stored as a map field on the player doc, so one snapshot gives us
+    // everything we need — no per-player subcollection fetches required.
+    _unsub = DB.playersRef().onSnapshot(snap => {
+      const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      _players = scoring.rankPlayers(players);
       render();
     });
   }

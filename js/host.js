@@ -26,19 +26,10 @@ const Host = (() => {
   // ── Live listener for penalty adjudication list ──────────────────────────────
 
   function listenToPlayers() {
-    _unsub = DB.playersRef().onSnapshot(async snap => {
-      const playerDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      const withHoles = await Promise.all(
-        playerDocs.map(async player => {
-          const holesSnap = await DB.holesRef(player.id).get();
-          const holes = {};
-          holesSnap.forEach(hDoc => {
-            holes[Number(hDoc.id)] = hDoc.data();
-          });
-          return { ...player, holes };
-        })
-      );
-      renderPenalties(withHoles);
+    // Holes are on the player doc — no N+1 subcollection fetches needed
+    _unsub = DB.playersRef().onSnapshot(snap => {
+      const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderPenalties(players);
     });
   }
 
@@ -48,12 +39,14 @@ const Host = (() => {
     if (!confirm('Reset all hole data for every player? The player roster stays intact.')) return;
 
     try {
-      const snap  = await DB.playersRef().get();
+      const snap = await DB.playersRef().get();
       const batch = DB.db.batch();
+      // Build a clean empty holes map
+      const emptyHoles = {};
+      CONFIG.holes.forEach(h => { emptyHoles[h.n] = scoring.emptyHole(); });
+      // Overwrite the holes map on each player doc in one batch
       snap.docs.forEach(playerDoc => {
-        CONFIG.holes.forEach(h => {
-          batch.set(DB.holeRef(playerDoc.id, h.n), scoring.emptyHole());
-        });
+        batch.update(DB.playerRef(playerDoc.id), { holes: emptyHoles });
       });
       await batch.commit();
       Animations.showToast('⛳ Round reset — all scores cleared.', 'info');
@@ -130,14 +123,14 @@ const Host = (() => {
 
   async function voidPenalty(playerId, holeN, penaltyId) {
     try {
-      const snap = await DB.holeRef(playerId, holeN).get();
+      const snap = await DB.playerRef(playerId).get();
       if (!snap.exists) return;
 
-      const data = snap.data();
-      const penalties = (data.penalties || []).map(p =>
+      const holeData = snap.data()?.holes?.[holeN] || {};
+      const penalties = (holeData.penalties || []).map(p =>
         p.id === penaltyId ? { ...p, status: 'voided' } : p
       );
-      await DB.holeRef(playerId, holeN).update({ penalties });
+      await DB.playerRef(playerId).update({ [`holes.${holeN}.penalties`]: penalties });
       Animations.showToast('Penalty voided by host.', 'info');
     } catch (e) {
       console.error('Void error:', e);

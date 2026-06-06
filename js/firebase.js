@@ -37,13 +37,13 @@ db.enablePersistence({ synchronizeTabs: true })
 
 const SESSION_ID = 'clynch';
 
-const sessionRef  = () => db.collection('sessions').doc(SESSION_ID);
-const playersRef  = () => sessionRef().collection('players');
-const playerRef   = (id) => playersRef().doc(id);
-const holesRef    = (playerId) => playerRef(playerId).collection('holes');
-const holeRef     = (playerId, n) => holesRef(playerId).doc(String(n));
+const sessionRef = () => db.collection('sessions').doc(SESSION_ID);
+const playersRef = () => sessionRef().collection('players');
+const playerRef  = (id) => playersRef().doc(id);
 
 // ── Exports ────────────────────────────────────────────────────────────────────
+// Holes are stored as a map field INSIDE the player document — not as a subcollection.
+// Update a specific hole field via:  playerRef(id).update({ "holes.1.drinks": n })
 // Use these throughout the app — never build paths manually elsewhere.
 
-const DB = { db, sessionRef, playersRef, playerRef, holesRef, holeRef, SESSION_ID };
+const DB = { db, sessionRef, playersRef, playerRef, SESSION_ID };

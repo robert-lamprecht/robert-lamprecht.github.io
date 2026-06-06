@@ -155,8 +155,9 @@ const Penalty = (() => {
     if (btn) btn.disabled = true;
 
     try {
-      await DB.holeRef(_targetPlayerId, _selectedHole).update({
-        penalties: firebase.firestore.FieldValue.arrayUnion(penalty),
+      // Holes live on the player doc — use dot-notation to append to the array
+      await DB.playerRef(_targetPlayerId).update({
+        [`holes.${_selectedHole}.penalties`]: firebase.firestore.FieldValue.arrayUnion(penalty),
       });
       Animations.showToast(`⛳ Penalty filed against ${_targetName}.`, 'info');
       reset();
@@ -186,11 +187,12 @@ const Penalty = (() => {
     }
 
     try {
-      const snap = await DB.holeRef(targetPlayerId, holeN).get();
+      // Read the player doc (holes are a map field, not a subcollection)
+      const snap = await DB.playerRef(targetPlayerId).get();
       if (!snap.exists) return;
 
-      const data      = snap.data();
-      const penalties = JSON.parse(JSON.stringify(data.penalties || [])); // deep clone
+      const holeData  = snap.data()?.holes?.[holeN] || {};
+      const penalties = JSON.parse(JSON.stringify(holeData.penalties || [])); // deep clone
       const idx       = penalties.findIndex(p => p.id === penaltyId);
       if (idx === -1) return;
 
@@ -243,11 +245,13 @@ const Penalty = (() => {
         };
 
         const batch = DB.db.batch();
-        // Write modified penalties array back to target player's hole
-        batch.update(DB.holeRef(targetPlayerId, Number(holeN)), { penalties });
-        // Append falseFiling to the original filer's same hole
-        batch.update(DB.holeRef(penalty.byPlayerId, Number(holeN)), {
-          penalties: firebase.firestore.FieldValue.arrayUnion(falsePenalty),
+        // Overwrite the voided penalties array on target's player doc
+        batch.update(DB.playerRef(targetPlayerId), {
+          [`holes.${holeN}.penalties`]: penalties,
+        });
+        // Append falseFiling to the original filer's player doc
+        batch.update(DB.playerRef(penalty.byPlayerId), {
+          [`holes.${holeN}.penalties`]: firebase.firestore.FieldValue.arrayUnion(falsePenalty),
         });
         await batch.commit();
 
@@ -257,7 +261,9 @@ const Penalty = (() => {
         );
       } else {
         // ── Partial vote: just persist the updated disputes array ────────────
-        await DB.holeRef(targetPlayerId, Number(holeN)).update({ penalties });
+        await DB.playerRef(targetPlayerId).update({
+          [`holes.${holeN}.penalties`]: penalties,
+        });
         const remaining = CONFIG.disputeQuorum - distinctVoters.size;
         Animations.showToast(
           `Dispute logged. ${remaining} more agreement${remaining > 1 ? 's' : ''} needed.`,

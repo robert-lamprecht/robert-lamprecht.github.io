@@ -82,11 +82,16 @@ const App = (() => {
       const isHost   = hostCode === CONFIG.hostCode;
       const isColin  = name.toLowerCase() === CONFIG.colinName.toLowerCase();
 
+      // Build empty holes map (stored flat inside the player doc)
+      const holes = {};
+      CONFIG.holes.forEach(h => { holes[h.n] = scoring.emptyHole(); });
+
       const playerData = {
         name,
         isColin,
         isHost,
         joinedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        holes,   // flat map — no subcollection needed
       };
 
       try {
@@ -96,15 +101,8 @@ const App = (() => {
           { merge: true }
         );
 
-        // Create player doc
+        // Create player doc (holes included — one write, no batch)
         await DB.playerRef(playerId).set(playerData);
-
-        // Init all 5 hole docs
-        const batch = DB.db.batch();
-        CONFIG.holes.forEach(h => {
-          batch.set(DB.holeRef(playerId, h.n), scoring.emptyHole());
-        });
-        await batch.commit();
 
         // Persist locally
         localStorage.setItem('playerId',   playerId);
