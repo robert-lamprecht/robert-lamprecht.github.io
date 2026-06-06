@@ -328,7 +328,7 @@ const App = (() => {
 
         const shouts = [];
         snap.forEach(doc => {
-          shouts.push(doc.data());
+          shouts.push({ id: doc.id, ...doc.data() });
         });
         shouts.reverse(); // Display oldest at top, newest at bottom
 
@@ -357,6 +357,25 @@ const App = (() => {
           item.appendChild(fromSpan);
           item.appendChild(textSpan);
           item.appendChild(timeSpan);
+
+          if (state.isHost) {
+            const delBtn = document.createElement('button');
+            delBtn.className = 'shout-delete-btn';
+            delBtn.innerHTML = '✕';
+            delBtn.setAttribute('aria-label', 'Delete message');
+            delBtn.addEventListener('click', async () => {
+              if (confirm('Are you sure you want to delete this shout?')) {
+                try {
+                  await DB.sessionRef().collection('feed').doc(shout.id).delete();
+                } catch (err) {
+                  console.error('Error deleting shout:', err);
+                  Animations.showToast('Failed to delete shout.', 'error');
+                }
+              }
+            });
+            item.appendChild(delBtn);
+          }
+
           feedEl.appendChild(item);
         });
 
@@ -515,6 +534,9 @@ const App = (() => {
           if (typeof Host !== 'undefined') {
             Host.init(state);
           }
+
+          // Refresh the Shout Box feed to display delete buttons immediately
+          listenToFeed();
 
           // Open the Host panel immediately
           const hostPanel = document.getElementById('host-panel');
