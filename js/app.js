@@ -1,5 +1,16 @@
 // ─── app.js — view routing, shared state, join flow ──────────────────────────
 
+// RFC4122 v4 compliant fallback UUID generator for non-secure contexts (HTTP)
+function generateUUID() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 const App = (() => {
 
   // ── Shared state ─────────────────────────────────────────────────────────────
@@ -23,6 +34,10 @@ const App = (() => {
   let _pendingName   = null;
   let _pendingIsHost = false;
   let _pendingReturn = null;
+  let _sessionUnsub  = null;
+  let _feedUnsub     = null;
+  let _shuffledQuestions = [];
+  let _questionIndex     = 0;
 
   // ── localStorage helpers ──────────────────────────────────────────────────────
 
@@ -190,8 +205,11 @@ const App = (() => {
   async function joinAsNew(name, isHost) {
     hideConflict();
 
-    const playerId = crypto.randomUUID();
-    const isColin  = name.toLowerCase() === CONFIG.colinName.toLowerCase();
+    const playerId = generateUUID();
+    
+    // Check if a Colin already exists to ensure exactly one player is flagged isColin
+    const colinSnap = await DB.playersRef().where('isColin', '==', true).get();
+    const isColin = name.toLowerCase() === CONFIG.colinName.toLowerCase() && colinSnap.empty;
 
     // Include any holes already added by the host before this player joined
     const sessionSnap = await DB.sessionRef().get();
@@ -256,16 +274,226 @@ const App = (() => {
 
   // ── After join ────────────────────────────────────────────────────────────────
 
+  function listenToSession() {
+    if (_sessionUnsub) _sessionUnsub();
+    _sessionUnsub = DB.sessionRef().onSnapshot(snap => {
+      if (!snap.exists) return;
+      const data = snap.data();
+      const status = data.status;
+      state.isLocked = (status === 'final');
+
+      // Freeze/thaw UI
+      if (typeof Scorecard !== 'undefined' && Scorecard.setLocked) {
+        Scorecard.setLocked(state.isLocked);
+      }
+      if (typeof Penalty !== 'undefined' && Penalty.setLocked) {
+        Penalty.setLocked(state.isLocked);
+      }
+    });
+  }
+
   function afterJoin() {
     document.getElementById('player-name-header').textContent = state.playerName;
     if (state.isHost) document.getElementById('host-tab').hidden = false;
     document.getElementById('bottom-nav').hidden = false;
     showView('scorecard');
 
+    listenToSession();
+
     Scorecard.init(state);
     Scoreboard.init(state);
     Penalty.init(state);
     if (state.isHost) Host.init(state);
+
+    initShoutBox();
+    listenToFeed();
+  }
+
+  // ── Live Shout Box Feed ──────────────────────────────────────────────────────
+
+  function listenToFeed() {
+    if (_feedUnsub) _feedUnsub();
+
+    const feedEl = document.getElementById('shout-box-feed');
+    if (!feedEl) return;
+
+    _feedUnsub = DB.sessionRef().collection('feed')
+      .orderBy('at', 'desc')
+      .limit(15)
+      .onSnapshot(snap => {
+        if (snap.empty) {
+          feedEl.innerHTML = '<p class="shout-empty">No shouts yet. Be the first to toast!</p>';
+          return;
+        }
+
+        const shouts = [];
+        snap.forEach(doc => {
+          shouts.push(doc.data());
+        });
+        shouts.reverse(); // Display oldest at top, newest at bottom
+
+        feedEl.innerHTML = '';
+        shouts.forEach(shout => {
+          const item = document.createElement('div');
+          item.className = 'shout-item';
+
+          const fromSpan = document.createElement('span');
+          fromSpan.className = 'shout-from';
+          fromSpan.textContent = (shout.from || 'Anon') + ':';
+
+          const textSpan = document.createElement('span');
+          textSpan.className = 'shout-text';
+          textSpan.textContent = shout.text || '';
+
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'shout-at';
+          if (shout.at) {
+            const date = shout.at.toDate ? shout.at.toDate() : new Date(shout.at);
+            timeSpan.textContent = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          } else {
+            timeSpan.textContent = 'Just now';
+          }
+
+          item.appendChild(fromSpan);
+          item.appendChild(textSpan);
+          item.appendChild(timeSpan);
+          feedEl.appendChild(item);
+        });
+
+        feedEl.scrollTop = feedEl.scrollHeight;
+      });
+  }
+
+  function initShoutBox() {
+    const form = document.getElementById('shout-form');
+    if (!form) return;
+
+    // Remove existing event listener if any by replacing form
+    const newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    const newInput = newForm.querySelector('#shout-input');
+
+    newForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (!newInput) return;
+      const text = newInput.value.trim();
+      if (!text) return;
+      if (state.isLocked) {
+        Animations.showToast('Scores are final. No more shouting!', 'info');
+        return;
+      }
+
+      newInput.value = '';
+      try {
+        await DB.sessionRef().collection('feed').add({
+          from: state.playerName,
+          text: text,
+          at: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      } catch (err) {
+        console.error('Error posting shout:', err);
+        Animations.showToast('Failed to send shout.', 'error');
+      }
+    });
+  }
+
+  // ── Party Games Deck ─────────────────────────────────────────────────────────
+
+  function shuffleQuestions() {
+    const pool = CONFIG.partyQuestions || [];
+    _shuffledQuestions = [...pool];
+    for (let i = _shuffledQuestions.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [_shuffledQuestions[i], _shuffledQuestions[j]] = [_shuffledQuestions[j], _shuffledQuestions[i]];
+    }
+    _questionIndex = 0;
+  }
+
+  function getNextQuestion() {
+    if (_shuffledQuestions.length === 0 || _questionIndex >= _shuffledQuestions.length) {
+      shuffleQuestions();
+    }
+    return _shuffledQuestions[_questionIndex++];
+  }
+
+  function renderNextCard(cardEl) {
+    const q = getNextQuestion();
+    if (!q) return;
+
+    const badge = cardEl.querySelector('#games-card-badge');
+    const text = cardEl.querySelector('#games-card-text');
+
+    if (badge && text) {
+      badge.className = 'games-card-badge';
+      badge.classList.add(q.cat);
+      badge.textContent = q.cat === 'never' ? 'Never Have I Ever' : q.cat;
+      text.textContent = q.q;
+    }
+  }
+
+  function initGames() {
+    const overlay = document.getElementById('party-games-overlay');
+    const card = document.getElementById('games-card');
+    const nextBtn = document.getElementById('games-next-btn');
+    const closeBtn = document.getElementById('games-close-btn');
+    const backdrop = document.getElementById('games-backdrop');
+
+    const openDeck = () => {
+      if (!overlay) return;
+      if (_shuffledQuestions.length === 0) {
+        shuffleQuestions();
+      }
+      renderNextCard(card);
+      Animations.showGames(overlay);
+    };
+
+    document.getElementById('scorecard-games-btn')?.addEventListener('click', openDeck);
+    document.getElementById('scoreboard-games-btn')?.addEventListener('click', openDeck);
+
+    closeBtn?.addEventListener('click', () => {
+      if (overlay) Animations.hideGames(overlay);
+    });
+    backdrop?.addEventListener('click', () => {
+      if (overlay) Animations.hideGames(overlay);
+    });
+
+    nextBtn?.addEventListener('click', () => {
+      if (!card) return;
+      // Animate card Y-rotation flip
+      gsap.to(card, {
+        scale: 0.9,
+        rotationY: 90,
+        opacity: 0,
+        duration: 0.2,
+        ease: 'power2.in',
+        onComplete: () => {
+          renderNextCard(card);
+          gsap.fromTo(card,
+            { rotationY: -90, scale: 0.9, opacity: 0 },
+            { rotationY: 0, scale: 1, opacity: 1, duration: 0.3, ease: 'back.out(1.2)' }
+          );
+        }
+      });
+    });
+  }
+
+  // ── Rules overlay wiring ──────────────────────────────────────────────────────
+
+  function initRules() {
+    const overlay = document.getElementById('rules-overlay');
+
+    document.getElementById('scorecard-rules-btn')?.addEventListener('click', () => {
+      if (overlay) Animations.showRules(overlay);
+    });
+
+    document.getElementById('scoreboard-rules-btn')?.addEventListener('click', () => {
+      if (overlay) Animations.showRules(overlay);
+    });
+
+    document.getElementById('rules-close-btn')?.addEventListener('click', () => {
+      if (overlay) Animations.hideRules(overlay);
+    });
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────
@@ -273,6 +501,8 @@ const App = (() => {
   function init() {
     initNav();
     initJoin();   // async — returns a promise we don't need to await
+    initRules();
+    initGames();
   }
 
   return { init, state, showView, allHoles };

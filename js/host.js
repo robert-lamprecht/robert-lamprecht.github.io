@@ -4,6 +4,7 @@ const Host = (() => {
 
   let _state   = null;
   let _unsub   = null;
+  let _controlsBound = false;
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -14,10 +15,12 @@ const Host = (() => {
   }
 
   function bindControls() {
+    if (_controlsBound) return;
     document.getElementById('host-reset-btn')?.addEventListener('click', resetRound);
     document.getElementById('host-lock-btn')?.addEventListener('click', lockFinal);
     document.getElementById('host-close-btn')?.addEventListener('click', closePanel);
     document.getElementById('host-add-hole-btn')?.addEventListener('click', addHole);
+    _controlsBound = true;
   }
 
   function closePanel() {
@@ -27,6 +30,7 @@ const Host = (() => {
   // ── Live listener — drives all three live sections ───────────────────────────
 
   function listenToPlayers() {
+    if (_unsub) _unsub();
     _unsub = DB.playersRef().onSnapshot(snap => {
       const players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       renderDisputeQueue(players);
@@ -48,6 +52,9 @@ const Host = (() => {
       snap.docs.forEach(playerDoc => {
         batch.update(DB.playerRef(playerDoc.id), { holes: emptyHoles });
       });
+      // Reset session status back to active
+      batch.update(DB.sessionRef(), { status: 'active' });
+
       await batch.commit();
       Animations.showToast('⛳ Round reset — all scores cleared.', 'info');
       closePanel();
@@ -187,15 +194,18 @@ const Host = (() => {
   }
 
   async function approveDispute(playerId, holeN, penaltyId) {
+    const playerRef = DB.playerRef(playerId);
     try {
-      const snap = await DB.playerRef(playerId).get();
-      if (!snap.exists) return;
-      const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
-      const idx = penalties.findIndex(p => p.id === penaltyId);
-      if (idx === -1) return;
-      penalties[idx].status   = 'voided';
-      penalties[idx].disputed = false;
-      await DB.playerRef(playerId).update({ [`holes.${holeN}.penalties`]: penalties });
+      await DB.db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(playerRef);
+        if (!snap.exists) return;
+        const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
+        const idx = penalties.findIndex(p => p.id === penaltyId);
+        if (idx === -1) return;
+        penalties[idx].status   = 'voided';
+        penalties[idx].disputed = false;
+        transaction.update(playerRef, { [`holes.${holeN}.penalties`]: penalties });
+      });
       Animations.showToast('Dispute approved — penalty voided.', 'info');
     } catch (e) {
       console.error('Approve error:', e);
@@ -204,15 +214,18 @@ const Host = (() => {
   }
 
   async function denyDispute(playerId, holeN, penaltyId) {
+    const playerRef = DB.playerRef(playerId);
     try {
-      const snap = await DB.playerRef(playerId).get();
-      if (!snap.exists) return;
-      const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
-      const idx = penalties.findIndex(p => p.id === penaltyId);
-      if (idx === -1) return;
-      penalties[idx].disputed     = false;
-      penalties[idx].disputeDenied = true;    // prevents re-disputing
-      await DB.playerRef(playerId).update({ [`holes.${holeN}.penalties`]: penalties });
+      await DB.db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(playerRef);
+        if (!snap.exists) return;
+        const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
+        const idx = penalties.findIndex(p => p.id === penaltyId);
+        if (idx === -1) return;
+        penalties[idx].disputed     = false;
+        penalties[idx].disputeDenied = true;    // prevents re-disputing
+        transaction.update(playerRef, { [`holes.${holeN}.penalties`]: penalties });
+      });
       Animations.showToast('Dispute denied — penalty stands.', 'info');
     } catch (e) {
       console.error('Deny error:', e);
@@ -267,14 +280,17 @@ const Host = (() => {
   }
 
   async function voidPenalty(playerId, holeN, penaltyId) {
+    const playerRef = DB.playerRef(playerId);
     try {
-      const snap = await DB.playerRef(playerId).get();
-      if (!snap.exists) return;
-      const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
-      const idx = penalties.findIndex(p => p.id === penaltyId);
-      if (idx === -1) return;
-      penalties[idx].status = 'voided';
-      await DB.playerRef(playerId).update({ [`holes.${holeN}.penalties`]: penalties });
+      await DB.db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(playerRef);
+        if (!snap.exists) return;
+        const penalties = JSON.parse(JSON.stringify(snap.data()?.holes?.[holeN]?.penalties || []));
+        const idx = penalties.findIndex(p => p.id === penaltyId);
+        if (idx === -1) return;
+        penalties[idx].status = 'voided';
+        transaction.update(playerRef, { [`holes.${holeN}.penalties`]: penalties });
+      });
       Animations.showToast('Penalty voided by host.', 'info');
     } catch (e) {
       console.error('Void error:', e);

@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Session document + all subcollections (feed, etc.) ────────────────────
+    // Scoped to the single known session to limit blast radius.
+    match /sessions/clynch {
+      allow read, write: if true;
+    }
+
+    match /sessions/clynch/{collection}/{document=**} {
+      allow read, write: if true;
+    }
+
+  }
+}

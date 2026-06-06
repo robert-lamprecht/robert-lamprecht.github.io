@@ -8,9 +8,11 @@ const Scorecard = (() => {
 
   let _state          = null;
   let _holeData       = {};      // { 1: holeDoc, 2: holeDoc, ... } local cache
-  let _unsubs         = [];
+  let _playerUnsub    = null;
+  let _sessionUnsub   = null;
   let _initialized    = false;   // true after the first snapshot — prevents spurious toasts on load
   let _renderedHoleNs = new Set(); // hole numbers that have a built card
+  let _isLocked       = false;
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -93,25 +95,26 @@ const Scorecard = (() => {
     if (!card) return;
 
     card.querySelectorAll('.counter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
         const field = btn.dataset.field;
         const delta = btn.classList.contains('counter-plus') ? 1 : -1;
-        incrementField(n, field, delta);
+        incrementField(n, field, delta, e);
       });
     });
 
     const colinBtn = card.querySelector('[data-action="colin"]');
-    if (colinBtn) colinBtn.addEventListener('click', () => incrementField(n, 'colinDrinks', 1));
+    if (colinBtn) colinBtn.addEventListener('click', (e) => incrementField(n, 'colinDrinks', 1, e));
 
     card.querySelectorAll('.chip--bonus').forEach(chip => {
-      chip.addEventListener('click', () => toggleBonus(n, chip.dataset.bonus, chip));
+      chip.addEventListener('click', (e) => toggleBonus(n, chip.dataset.bonus, chip, e));
     });
   }
 
   // ── Session listener — watch for new holes added by host ─────────────────────
 
   function listenToSession() {
-    const unsub = DB.sessionRef().onSnapshot(snap => {
+    if (_sessionUnsub) _sessionUnsub();
+    _sessionUnsub = DB.sessionRef().onSnapshot(snap => {
       if (!snap.exists) return;
       const customHoles = snap.data().customHoles || [];
 
@@ -126,7 +129,6 @@ const Scorecard = (() => {
         }
       });
     });
-    _unsubs.push(unsub);
   }
 
   // Append a single hole card for a dynamically-added hole
@@ -140,18 +142,60 @@ const Scorecard = (() => {
     bindCardForHole(hole.n);
     Animations.staggerIn([card]);
 
+    if (_isLocked) {
+      card.querySelectorAll('.counter-btn, [data-action="colin"], .chip--bonus').forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('disabled');
+      });
+    }
+
     // Render immediately with any data already cached
     if (_holeData[hole.n]) renderHole(hole.n, _holeData[hole.n]);
   }
 
   // ── Firestore writes — use dot-notation on the player doc ────────────────────
 
-  async function incrementField(holeN, field, delta) {
+  async function incrementField(holeN, field, delta, e) {
+    if (_isLocked) return;
     const current = _holeData[holeN]?.[field] ?? 0;
     const next    = Math.max(0, current + delta);
     if (next === current) return;
 
+    // Trigger confetti if adding drinks/colinDrinks yields an under-par score
+    if (delta > 0 && e) {
+      const currentHole = _holeData[holeN] || scoring.emptyHole();
+      const tempHole = {
+        ...currentHole,
+        [field]: next
+      };
+      if (scoring.holeScore(tempHole) < 0) {
+        Animations.confettiBlast(e.clientX, e.clientY);
+      }
+    }
+
     try {
+      if (field === 'colinDrinks' && delta > 0 && CONFIG.colinAutoCredit) {
+        // Query to find Colin's player ID dynamically
+        const colinSnap = await DB.playersRef().where('isColin', '==', true).get();
+        if (!colinSnap.empty) {
+          const colinDoc = colinSnap.docs[0];
+          const colinId = colinDoc.id;
+          const colinHoles = colinDoc.data().holes || {};
+          const colinHoleData = colinHoles[holeN] || scoring.emptyHole();
+          const colinCurrentDrinks = colinHoleData.drinks || 0;
+
+          const batch = DB.db.batch();
+          batch.update(DB.playerRef(_state.playerId), {
+            [`holes.${holeN}.${field}`]: next,
+          });
+          batch.update(DB.playerRef(colinId), {
+            [`holes.${holeN}.drinks`]: colinCurrentDrinks + delta,
+          });
+          await batch.commit();
+          return;
+        }
+      }
+
       await DB.playerRef(_state.playerId).update({
         [`holes.${holeN}.${field}`]: next,
       });
@@ -161,15 +205,22 @@ const Scorecard = (() => {
     }
   }
 
-  async function toggleBonus(holeN, bonusKey, chipEl) {
+  async function toggleBonus(holeN, bonusKey, chipEl, e) {
+    if (_isLocked) return;
     const current = _holeData[holeN]?.bonuses?.[bonusKey] ?? false;
+    const nextVal = !current;
+
+    if (nextVal && e) {
+      Animations.confettiBlast(e.clientX, e.clientY);
+    }
+
     try {
       await DB.playerRef(_state.playerId).update({
-        [`holes.${holeN}.bonuses.${bonusKey}`]: !current,
+        [`holes.${holeN}.bonuses.${bonusKey}`]: nextVal,
       });
       Animations.scoreBounce(chipEl);
-    } catch (e) {
-      console.error('Write error:', e);
+    } catch (err) {
+      console.error('Write error:', err);
     }
   }
 
@@ -179,8 +230,15 @@ const Scorecard = (() => {
   // this listener immediately — no subcollection polling needed.
 
   function listenToPlayer() {
-    const unsub = DB.playerRef(_state.playerId).onSnapshot(snap => {
-      if (!snap.exists) return;
+    if (_playerUnsub) _playerUnsub();
+
+    _playerUnsub = DB.playerRef(_state.playerId).onSnapshot(snap => {
+      if (!snap.exists) {
+        // Player document deleted! Clear localStorage and reload to show landing screen
+        localStorage.clear();
+        window.location.reload();
+        return;
+      }
 
       const { holes = {} } = snap.data();
 
@@ -219,8 +277,6 @@ const Scorecard = (() => {
       _initialized = true;
       renderRunningTotal();
     });
-
-    _unsubs.push(unsub);
   }
 
   // ── Rendering ────────────────────────────────────────────────────────────────
@@ -279,7 +335,7 @@ const Scorecard = (() => {
       } else if (isActive && p.disputeDenied) {
         actionHTML = '<span class="badge badge--denied">✗ Stands</span>';
       } else if (isActive && CONFIG.disputesEnabled) {
-        actionHTML = `<button class="btn btn-ghost btn-xs dispute-btn" data-penalty-id="${p.id}" data-hole="${holeN}">Dispute</button>`;
+        actionHTML = `<button class="btn btn-ghost btn-xs dispute-btn" ${_isLocked ? 'disabled' : ''} data-penalty-id="${p.id}" data-hole="${holeN}">Dispute</button>`;
       }
 
       const row = document.createElement('div');
@@ -316,5 +372,13 @@ const Scorecard = (() => {
     return 'badge--albatross';
   }
 
-  return { init };
+  function setLocked(isLocked) {
+    _isLocked = isLocked;
+    document.querySelectorAll('.counter-btn, [data-action="colin"], .chip--bonus, .dispute-btn').forEach(btn => {
+      btn.disabled = isLocked;
+      btn.classList.toggle('disabled', isLocked);
+    });
+  }
+
+  return { init, setLocked };
 })();

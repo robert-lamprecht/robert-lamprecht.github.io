@@ -8,7 +8,9 @@ const Penalty = (() => {
   let _targetName      = null;
   let _selectedHole    = null;
   let _selectedFoul    = null;
+  let _buttonsBound    = false;
   let _unsub           = null;
+  let _isLocked        = false;
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +21,7 @@ const Penalty = (() => {
   }
 
   function listenToPlayers() {
+    if (_unsub) _unsub();
     _unsub = DB.playersRef().onSnapshot(snap => {
       _players = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       // If step 1 is currently visible, refresh it
@@ -29,8 +32,10 @@ const Penalty = (() => {
   }
 
   function bindStaticButtons() {
+    if (_buttonsBound) return;
     document.getElementById('penalty-confirm-btn')?.addEventListener('click', fileIt);
     document.getElementById('penalty-cancel-btn')?.addEventListener('click', reset);
+    _buttonsBound = true;
   }
 
   // ── Called when penalty tab is switched to ───────────────────────────────────
@@ -118,7 +123,7 @@ const Penalty = (() => {
   function renderStep4() {
     const summary = document.getElementById('penalty-summary');
     if (!summary) return;
-    const holeInfo = CONFIG.holes[_selectedHole - 1];
+    const holeInfo = App.allHoles().find(h => h.n === _selectedHole);
     summary.innerHTML = `
       <div class="summary-line">
         <span class="summary-label">Player</span>
@@ -139,10 +144,11 @@ const Penalty = (() => {
   // ── File the penalty ─────────────────────────────────────────────────────────
 
   async function fileIt() {
+    if (_isLocked) return;
     if (!_targetPlayerId || !_selectedHole || !_selectedFoul) return;
 
     const penalty = {
-      id:           crypto.randomUUID(),
+      id:           generateUUID(),
       type:         _selectedFoul,
       byPlayerId:   _state.playerId,
       byName:       _state.playerName,
@@ -183,57 +189,65 @@ const Penalty = (() => {
   // No quorum. Host sees it in the panel and approves (void) or denies (keep).
 
   async function openDispute(targetPlayerId, holeN, penaltyId) {
+    if (_isLocked) return;
     if (!CONFIG.disputesEnabled) {
       Animations.showToast('Disputes are disabled.', 'info');
       return;
     }
 
+    const playerRef = DB.playerRef(targetPlayerId);
+
     try {
-      const snap = await DB.playerRef(targetPlayerId).get();
-      if (!snap.exists) return;
+      await DB.db.runTransaction(async (transaction) => {
+        const snap = await transaction.get(playerRef);
+        if (!snap.exists) return;
 
-      const holeData  = snap.data()?.holes?.[holeN] || {};
-      const penalties = JSON.parse(JSON.stringify(holeData.penalties || []));
-      const idx       = penalties.findIndex(p => p.id === penaltyId);
-      if (idx === -1) return;
+        const holeData  = snap.data()?.holes?.[holeN] || {};
+        const penalties = JSON.parse(JSON.stringify(holeData.penalties || []));
+        const idx       = penalties.findIndex(p => p.id === penaltyId);
+        if (idx === -1) return;
 
-      const penalty = penalties[idx];
+        const penalty = penalties[idx];
 
-      if (penalty.status !== 'active') {
-        Animations.showToast('This penalty is already resolved.', 'info');
-        return;
-      }
-      if (penalty.disputed) {
-        Animations.showToast('Dispute already filed — waiting on the host.', 'info');
-        return;
-      }
-      if (penalty.disputeDenied) {
-        Animations.showToast('Host already reviewed this one — penalty stands.', 'info');
-        return;
-      }
-      if (penalty.byPlayerId === _state.playerId) {
-        Animations.showToast("You can't dispute your own filing.", 'info');
-        return;
-      }
+        if (penalty.status !== 'active') {
+          throw new Error('This penalty is already resolved.');
+        }
+        if (penalty.type === 'falseFiling') {
+          throw new Error('False filing penalties cannot be disputed.');
+        }
+        if (penalty.disputed) {
+          throw new Error('Dispute already filed — waiting on the host.');
+        }
+        if (penalty.disputeDenied) {
+          throw new Error('Host already reviewed this one — penalty stands.');
+        }
+        if (penalty.byPlayerId === _state.playerId) {
+          throw new Error("You can't dispute your own filing.");
+        }
 
-      // Mark as disputed; the host will see it in their panel
-      penalties[idx].disputed   = true;
-      penalties[idx].disputedBy = {
-        playerId: _state.playerId,
-        name:     _state.playerName,
-        at:       new Date().toISOString(),
-      };
+        // Mark as disputed; the host will see it in their panel
+        penalties[idx].disputed   = true;
+        penalties[idx].disputedBy = {
+          playerId: _state.playerId,
+          name:     _state.playerName,
+          at:       new Date().toISOString(),
+        };
 
-      await DB.playerRef(targetPlayerId).update({
-        [`holes.${holeN}.penalties`]: penalties,
+        transaction.update(playerRef, {
+          [`holes.${holeN}.penalties`]: penalties,
+        });
       });
 
       Animations.showToast('Dispute filed — the host will review it.', 'info');
     } catch (e) {
       console.error('Dispute error:', e);
-      Animations.showToast('Dispute failed — check connection.', 'error');
+      Animations.showToast(e.message || 'Dispute failed — check connection.', 'error');
     }
   }
 
-  return { init, onShow, openDispute };
+  function setLocked(isLocked) {
+    _isLocked = isLocked;
+  }
+
+  return { init, onShow, openDispute, setLocked };
 })();

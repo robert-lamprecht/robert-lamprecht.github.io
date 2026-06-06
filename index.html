@@ -58,6 +58,10 @@
   <!-- ── View: Scorecard ──────────────────────────────────────────────────── -->
   <div id="view-scorecard" class="view" hidden>
     <header class="top-bar">
+      <div class="top-bar-actions">
+        <button class="top-bar-rules-btn" id="scorecard-rules-btn">❓ Rules</button>
+        <button class="top-bar-rules-btn" id="scorecard-games-btn">🎉 Games</button>
+      </div>
       <span id="player-name-header" class="top-bar-name"></span>
       <span id="running-total" class="top-bar-score">E</span>
     </header>
@@ -70,10 +74,27 @@
   <!-- ── View: Scoreboard ─────────────────────────────────────────────────── -->
   <div id="view-scoreboard" class="view" hidden>
     <header class="top-bar">
+      <div class="top-bar-actions">
+        <button class="top-bar-rules-btn" id="scoreboard-rules-btn">❓ Rules</button>
+        <button class="top-bar-rules-btn" id="scoreboard-games-btn">🎉 Games</button>
+      </div>
       <span class="top-bar-name">Leaderboard</span>
+      <span style="min-width:48px"></span><!-- spacer for balance -->
     </header>
     <div id="scoreboard-rows" class="scoreboard-rows">
       <!-- Rows injected by scoreboard.js -->
+    </div>
+
+    <!-- Shout Box (Live Chat Feed) -->
+    <div class="shout-box-wrap">
+      <h3 class="shout-box-title">📢 Live Shouts & Toasts</h3>
+      <div id="shout-box-feed" class="shout-box-feed">
+        <p class="shout-empty">No shouts yet. Be the first to toast!</p>
+      </div>
+      <form id="shout-form" class="shout-form" autocomplete="off">
+        <input id="shout-input" type="text" placeholder="Shout something..." maxlength="60" required>
+        <button type="submit" class="btn btn-primary btn-xs">Shout</button>
+      </form>
     </div>
 
     <!-- Winner reveal (shown on session.status === "final") -->
@@ -163,6 +184,117 @@
     </div>
 
     <button id="host-close-btn" class="btn btn-ghost btn-sm" style="margin-top:16px">Close</button>
+  </div>
+
+  <!-- ── Rules Overlay ────────────────────────────────────────────────────── -->
+  <div id="rules-overlay" class="rules-overlay" hidden>
+    <div class="rules-header">
+      <h2 class="rules-title">⛳ How to Play</h2>
+      <button id="rules-close-btn" class="rules-close-btn" aria-label="Close rules">✕</button>
+    </div>
+    <div class="rules-content">
+      <section class="rules-section">
+        <h3>Objective</h3>
+        <p>This is a 5-hole bar crawl played by golf rules: <strong>lowest total score wins!</strong> The twist is that the lowest score belongs to whoever drank the most.</p>
+      </section>
+
+      <section class="rules-section">
+        <h3>Scoring Scale (Per Hole)</h3>
+        <table class="rules-table">
+          <thead>
+            <tr>
+              <th>Drinks</th>
+              <th>Golf Term</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0 drinks</td>
+              <td>Bogey</td>
+              <td>+1</td>
+            </tr>
+            <tr>
+              <td>1 drink</td>
+              <td>Par</td>
+              <td>E (0)</td>
+            </tr>
+            <tr>
+              <td>2 drinks</td>
+              <td>Birdie</td>
+              <td>-1</td>
+            </tr>
+            <tr>
+              <td>3 drinks</td>
+              <td>Eagle</td>
+              <td>-2</td>
+            </tr>
+            <tr>
+              <td>4 drinks</td>
+              <td>Albatross</td>
+              <td>-3</td>
+            </tr>
+            <tr>
+              <td>5+ drinks</td>
+              <td>(Uncapped)</td>
+              <td>-4, -5, etc.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="rules-section">
+        <h3>What Counts as a Drink?</h3>
+        <ul>
+          <li>Any beer, cocktail, or glass of wine.</li>
+          <li>A shot.</li>
+          <li><strong>Buying Colin a drink:</strong> Lowers the score of the buyer only (does not credit Colin's card). Feel free to buy him drinks to lower your score!</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Bonuses (−1 stroke each)</h3>
+        <p>Earn once per hole:</p>
+        <ul>
+          <li><strong>Recruited a stranger:</strong> Convinced a stranger to join the crawl.</li>
+          <li><strong>Won a bar game:</strong> Win any game at the bar.</li>
+          <li><strong>Gave a toast:</strong> Give a toast to the group.</li>
+          <li><strong>Signature challenge:</strong> Complete the specific challenge for that hole.</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Penalties (+1 stroke each)</h3>
+        <p>Filed by other players (no self-penalizing!):</p>
+        <ul>
+          <li>Spilled a drink.</li>
+          <li>Didn't finish a drink (shots included).</li>
+          <li>Left a bar before the group.</li>
+          <li>Passed on a round everyone else joined.</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Disputes & False Filings</h3>
+        <p>If you disagree with a penalty filed against you, you can dispute it. If <strong>2 other players</strong> agree with your dispute, the penalty is voided. However, the player who filed the false penalty receives an automatic <strong>+1 False Filing penalty</strong> on that hole!</p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ── Party Games Overlay ────────────────────────────────────────────────── -->
+  <div id="party-games-overlay" class="games-overlay" hidden>
+    <div class="games-overlay-backdrop" id="games-backdrop"></div>
+    <div class="games-card-container">
+      <div class="games-card" id="games-card">
+        <div class="games-card-badge" id="games-card-badge">TRIVIA</div>
+        <p class="games-card-text" id="games-card-text">Loading game card...</p>
+        <div class="games-card-decor">⛳</div>
+      </div>
+      <div class="games-actions">
+        <button id="games-next-btn" class="btn btn-gold btn-lg">Next Card →</button>
+        <button id="games-close-btn" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+    </div>
   </div>
 
   <!-- ── Toast container ──────────────────────────────────────────────────── -->
