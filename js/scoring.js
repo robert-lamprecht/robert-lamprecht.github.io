@@ -18,28 +18,27 @@ const scoring = (() => {
   // penaltyStrokes = count of active penalties × +1
   // holeScore      = drinkScore + bonusStrokes + penaltyStrokes
 
-  function isHoleActive(hole) {
-    if (!hole) return false;
+  function isHoleEmpty(hole) {
+    if (!hole) return true;
     const drinks = hole.drinks || 0;
     const colinDrinks = hole.colinDrinks || 0;
     const hasBonuses = Object.values(hole.bonuses || {}).some(Boolean);
     const hasPenalties = (hole.penalties || []).some(p => p.status === 'active');
-    return drinks > 0 || colinDrinks > 0 || hasBonuses || hasPenalties;
+    return drinks === 0 && colinDrinks === 0 && !hasBonuses && !hasPenalties;
   }
 
   function holeScore(hole) {
-    if (!isHoleActive(hole)) return 0;
-    const effectiveDrinks = (hole.drinks || 0) + (hole.colinDrinks || 0);
+    const effectiveDrinks = (hole ? (hole.drinks || 0) : 0) + (hole ? (hole.colinDrinks || 0) : 0);
 
     const drinkScore =
       effectiveDrinks === 0 ?  1
     : effectiveDrinks === 1 ?  0
     :                         -(effectiveDrinks - 1);
 
-    const bonuses = hole.bonuses || {};
+    const bonuses = hole ? (hole.bonuses || {}) : {};
     const bonusStrokes = Object.values(bonuses).filter(Boolean).length * -1;
 
-    const penalties = hole.penalties || [];
+    const penalties = hole ? (hole.penalties || []) : [];
     const penaltyStrokes = penalties.filter(p => p.status === 'active').length;
 
     return drinkScore + bonusStrokes + penaltyStrokes;
@@ -60,9 +59,9 @@ const scoring = (() => {
     return [...players].sort((a, b) => {
       const scoreDiff = totalScore(a.holes || {}) - totalScore(b.holes || {});
       if (scoreDiff !== 0) return scoreDiff;
-      // tiebreak: earlier joinedAt wins
-      const aTime = a.joinedAt?.toMillis?.() ?? a.joinedAt ?? Date.now();
-      const bTime = b.joinedAt?.toMillis?.() ?? b.joinedAt ?? Date.now();
+      // tiebreak: earlier joinedAt wins (stable sorting fallback)
+      const aTime = a.joinedAt?.toMillis?.() ?? (typeof a.joinedAt === 'number' ? a.joinedAt : (a.joinedAt instanceof Date ? a.joinedAt.getTime() : 0));
+      const bTime = b.joinedAt?.toMillis?.() ?? (typeof b.joinedAt === 'number' ? b.joinedAt : (b.joinedAt instanceof Date ? b.joinedAt.getTime() : 0));
       return aTime - bTime;
     });
   }
@@ -96,10 +95,8 @@ const scoring = (() => {
 
     console.group('scoring.runTests()');
 
-    // Inactive hole (unplayed) scores 0 (Par)
-    assert('Inactive hole → 0 (Par)',  holeScore({ drinks: 0, colinDrinks: 0, bonuses: {}, penalties: [] }),  0);
-    // Active hole with 0 drinks (e.g. has active penalty) scores drinkScore(1) + penalty(1) = 2
-    assert('0 drinks with active penalty → +2', holeScore({ drinks: 0, colinDrinks: 0, bonuses: {}, penalties: [{ status: 'active' }] }), 2);
+    // § 3.2 drink score table
+    assert('0 drinks → +1 (Bogey)',    holeScore({ drinks: 0, colinDrinks: 0, bonuses: {}, penalties: [] }),  1);
     assert('1 drink  →  0 (Par)',       holeScore({ drinks: 1, colinDrinks: 0, bonuses: {}, penalties: [] }),  0);
     assert('2 drinks → -1 (Birdie)',    holeScore({ drinks: 2, colinDrinks: 0, bonuses: {}, penalties: [] }), -1);
     assert('3 drinks → -2 (Eagle)',     holeScore({ drinks: 3, colinDrinks: 0, bonuses: {}, penalties: [] }), -2);
@@ -151,5 +148,5 @@ const scoring = (() => {
     return failed === 0;
   }
 
-  return { holeScore, totalScore, rankPlayers, emptyHole, runTests };
+  return { holeScore, totalScore, rankPlayers, emptyHole, isHoleEmpty, runTests };
 })();

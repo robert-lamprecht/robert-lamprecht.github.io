@@ -143,7 +143,7 @@ const Scoreboard = (() => {
       // Per-hole mini scores — includes custom holes added at runtime
       const holeScores = App.allHoles().map(h => {
         const hd = player.holes?.[h.n];
-        if (!hd) return '<span class="mini-score mini-score--empty">—</span>';
+        if (!hd || scoring.isHoleEmpty(hd)) return '<span class="mini-score mini-score--empty">—</span>';
         const s = scoring.holeScore(hd);
         return `<span class="mini-score ${miniScoreClass(s)}">${s === 0 ? 'E' : (s > 0 ? `+${s}` : s)}</span>`;
       }).join('');

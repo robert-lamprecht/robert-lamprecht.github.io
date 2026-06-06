@@ -494,6 +494,41 @@ const App = (() => {
     document.getElementById('rules-close-btn')?.addEventListener('click', () => {
       if (overlay) Animations.hideRules(overlay);
     });
+
+    document.getElementById('rules-host-login-btn')?.addEventListener('click', async () => {
+      const code = prompt('Enter Host Code to elevate privileges:');
+      if (!code) return;
+
+      if (code.trim() === CONFIG.hostCode) {
+        if (overlay) Animations.hideRules(overlay);
+
+        state.isHost = true;
+        localStorage.setItem('isHost', 'true');
+
+        try {
+          await DB.playerRef(state.playerId).update({ isHost: true });
+
+          // Show the Host tab and initialize Host module
+          const hostTab = document.getElementById('host-tab');
+          if (hostTab) hostTab.hidden = false;
+
+          if (typeof Host !== 'undefined') {
+            Host.init(state);
+          }
+
+          // Open the Host panel immediately
+          const hostPanel = document.getElementById('host-panel');
+          if (hostPanel) hostPanel.hidden = false;
+
+          Animations.showToast('Host access granted!', 'info');
+        } catch (err) {
+          console.error('Error elevating to host:', err);
+          Animations.showToast('Failed to save host status.', 'error');
+        }
+      } else {
+        Animations.showToast('Invalid host code.', 'error');
+      }
+    });
   }
 
   // ── Init ──────────────────────────────────────────────────────────────────────
