@@ -1,0 +1,235 @@
+:root {
+    --black: #0A0A0A;
+    --white: #F5F5F3;
+    --gray: #999;
+    --light-gray: #E2E2DF;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background: var(--white);
+    color: var(--black);
+    font-family: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Landing ─────────────────────────────────────────────── */
+
+.landing {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 6vh 2.5rem 4rem;
+    min-height: 100vh;
+}
+
+.landing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 2.5rem;
+}
+
+h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1;
+}
+
+.meta {
+    font-size: 0.8125rem;
+    color: var(--gray);
+    letter-spacing: 0.08em;
+}
+
+.rule {
+    border: none;
+    border-top: 1px solid var(--black);
+}
+
+/* ─── Accordion list ───────────────────────────────────────── */
+
+.accordion {
+    list-style: none;
+    padding: 0;
+}
+
+/* ─── Accordion trigger (the clickable header row) ─────────── */
+
+.accordion-trigger {
+    all: unset;
+    cursor: pointer;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 3rem 1fr auto;
+    align-items: start;
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--light-gray);
+    transition: opacity 0.15s;
+}
+
+.accordion-item.open .accordion-trigger {
+    border-bottom-color: transparent;
+}
+
+.accordion-trigger:hover {
+    opacity: 0.6;
+}
+
+.item-number {
+    font-size: 0.75rem;
+    color: var(--gray);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    padding-top: 0.35rem;
+}
+
+.item-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.item-title {
+    font-size: 1.75rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--black);
+}
+
+.item-desc {
+    font-size: 0.8125rem;
+    color: var(--gray);
+}
+
+.item-indicator {
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--gray);
+    line-height: 1;
+    padding-top: 0.5rem;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+}
+
+.accordion-item.open .item-indicator {
+    transform: rotate(45deg);
+}
+
+/* ─── Accordion panel (the expandable content) ─────────────── */
+
+.accordion-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.accordion-item.open .accordion-panel {
+    grid-template-rows: 1fr;
+}
+
+.accordion-panel-inner {
+    overflow: hidden;
+    padding: 0 3rem;
+    transition: padding 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 0;
+}
+
+.accordion-item.open .accordion-panel-inner {
+    padding: 2rem 3rem 3rem;
+}
+
+/* ─── Footer ───────────────────────────────────────────────── */
+
+.landing-footer {
+    padding-top: 2.5rem;
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+}
+
+.contact-link {
+    font-size: 0.8125rem;
+    color: var(--gray);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: color 0.15s;
+}
+
+.contact-link:hover {
+    color: var(--black);
+}
+
+/* ─── SVG stage ────────────────────────────────────────────── */
+
+#stage {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+    overflow: hidden;
+}
+
+/* ─── Do Not Push button ───────────────────────────────────── */
+
+#do-not-push {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    background: transparent;
+    color: var(--black);
+    border: 1px solid var(--black);
+    padding: 0.55rem 1rem;
+    font-family: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+#do-not-push:hover {
+    background: var(--black);
+    color: var(--white);
+}
+
+#do-not-push:active { opacity: 0.6; }
+
+/* ─── Responsive ───────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+    .landing {
+        padding: 4vh 1.25rem 3rem;
+    }
+
+    .accordion-trigger {
+        grid-template-columns: 2.5rem 1fr auto;
+    }
+
+    .item-title {
+        font-size: 1.375rem;
+    }
+
+    .accordion-panel-inner,
+    .accordion-item.open .accordion-panel-inner {
+        padding-left: 2.5rem;
+        padding-right: 0;
+    }
+}

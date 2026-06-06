@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robert Lamprecht</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;1,14..32,300&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+    <main class="landing">
+
+        <header class="landing-header">
+            <h1>Robert Lamprecht</h1>
+            <span class="meta">2026</span>
+        </header>
+
+        <hr class="rule">
+
+        <ol class="accordion">
+
+            <li class="accordion-item">
+                <button class="accordion-trigger">
+                    <span class="item-number">01</span>
+                    <span class="item-body">
+                        <span class="item-title">Research</span>
+                        <span class="item-desc">Experience · Interests · CV</span>
+                    </span>
+                    <span class="item-indicator" aria-hidden="true">+</span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-panel-inner">
+                        <!-- Research content goes here -->
+                    </div>
+                </div>
+            </li>
+
+            <li class="accordion-item">
+                <button class="accordion-trigger">
+                    <span class="item-number">02</span>
+                    <span class="item-body">
+                        <span class="item-title">Projects</span>
+                        <span class="item-desc">Tinkering · Experiments · Builds</span>
+                    </span>
+                    <span class="item-indicator" aria-hidden="true">+</span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-panel-inner">
+                        <!-- Projects content goes here -->
+                    </div>
+                </div>
+            </li>
+
+            <li class="accordion-item">
+                <button class="accordion-trigger">
+                    <span class="item-number">03</span>
+                    <span class="item-body">
+                        <span class="item-title">Studio</span>
+                        <span class="item-desc">Music · Visualization · Photography</span>
+                    </span>
+                    <span class="item-indicator" aria-hidden="true">+</span>
+                </button>
+                <div class="accordion-panel">
+                    <div class="accordion-panel-inner">
+                        <!-- Studio content goes here -->
+                    </div>
+                </div>
+            </li>
+
+        </ol>
+
+        <hr class="rule">
+
+        <footer class="landing-footer">
+            <a href="mailto:your@email.com" class="contact-link">Email</a>
+            <a href="https://github.com/Robert-Lamprecht" class="contact-link" target="_blank" rel="noopener">GitHub</a>
+        </footer>
+
+    </main>
+
+    <svg id="stage" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+    <button id="do-not-push">Do Not Push</button>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+</html>

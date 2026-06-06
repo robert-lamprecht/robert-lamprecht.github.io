@@ -1,46 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robert Lamprecht - Computational Neuroscientist</title>
-    <!-- Main stylesheet -->
-    <link rel="stylesheet" href="styles/main.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Clynch Bar Crawl Golf</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <!-- Matrix-style intro overlay with typewriter effect -->
-    <div id="intro-overlay">
-        <div id="intro-quote">
-            <div class="command-prompt">
-                <span id="quote-text"></span>
-            </div>
+
+  <!-- ── View: Landing / Join ─────────────────────────────────────────────── -->
+  <div id="view-landing" class="view active">
+    <div class="landing-inner">
+      <div class="landing-flag">⛳</div>
+      <h1 class="landing-title">Clynch<br>Bar Crawl<br>Golf</h1>
+      <p class="landing-subtitle">5 holes · Atlanta Beltline · Lowest score wins</p>
+
+      <form id="join-form" class="join-form" novalidate>
+        <div class="field-wrap">
+          <label for="input-name">Your name</label>
+          <input id="input-name" type="text" placeholder="e.g. Robert" autocomplete="off" maxlength="24" required>
         </div>
+        <div class="field-wrap">
+          <label for="input-code">Course code</label>
+          <input id="input-code" type="text" placeholder="Enter code" autocomplete="off" maxlength="20" required>
+          <p class="field-error" id="code-error" hidden>Wrong code — try again.</p>
+        </div>
+        <div class="field-wrap">
+          <label for="input-host">Host code <span class="optional">(optional)</span></label>
+          <input id="input-host" type="text" placeholder="Host only" autocomplete="off" maxlength="30">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg">Tee off →</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── View: Scorecard ──────────────────────────────────────────────────── -->
+  <div id="view-scorecard" class="view" hidden>
+    <header class="top-bar">
+      <span id="player-name-header" class="top-bar-name"></span>
+      <span id="running-total" class="top-bar-score">E</span>
+    </header>
+
+    <main id="hole-cards" class="hole-cards">
+      <!-- Hole cards injected by scorecard.js -->
+    </main>
+  </div>
+
+  <!-- ── View: Scoreboard ─────────────────────────────────────────────────── -->
+  <div id="view-scoreboard" class="view" hidden>
+    <header class="top-bar">
+      <span class="top-bar-name">Leaderboard</span>
+    </header>
+    <div id="scoreboard-rows" class="scoreboard-rows">
+      <!-- Rows injected by scoreboard.js -->
     </div>
 
-    <!-- Matrix rain animation canvas -->
-    <canvas id="matrix-bg"></canvas>
-    
-    <!-- Navigation bar -->
-    <nav>
-        <ul>
-            <li><a href="#home">Home</a></li>
-            <li><a href="#about">About</a></li>
-            <li><a href="#portfolio">Portfolio</a></li>
-            <li><a href="#cv">CV</a></li>
-            <li><a href="#contact">Contact</a></li>
-        </ul>
-    </nav>
-
-    <!-- Main content container -->
-    <div class="container">
-        <!-- Hero section with name and title -->
-        <section class="hero">
-            <h1>Robert Lamprecht</h1>
-            <p class="subtitle">Computational Neuroscientist</p>
-        </section>
+    <!-- Winner reveal (shown on session.status === "final") -->
+    <div id="winner-reveal" class="winner-reveal" hidden>
+      <div class="winner-inner">
+        <div class="winner-flag">🏆</div>
+        <h2 class="winner-label">Winner</h2>
+        <p id="winner-name" class="winner-name"></p>
+        <p id="winner-score" class="winner-score"></p>
+      </div>
     </div>
+  </div>
 
-    <!-- Main JavaScript file -->
-    <script src="scripts/main.js"></script>
+  <!-- ── View: File a Penalty ─────────────────────────────────────────────── -->
+  <div id="view-penalty" class="view" hidden>
+    <header class="top-bar">
+      <span class="top-bar-name">File a Penalty</span>
+    </header>
+
+    <!-- Step 1: Pick player -->
+    <section id="penalty-step-1" class="penalty-step">
+      <h2 class="step-heading">Who did it?</h2>
+      <div id="penalty-player-list" class="pill-grid"></div>
+    </section>
+
+    <!-- Step 2: Pick hole -->
+    <section id="penalty-step-2" class="penalty-step" hidden>
+      <h2 class="step-heading">Which hole?</h2>
+      <div class="hole-btn-grid" id="penalty-hole-grid"></div>
+    </section>
+
+    <!-- Step 3: Pick foul -->
+    <section id="penalty-step-3" class="penalty-step" hidden>
+      <h2 class="step-heading">What happened?</h2>
+      <div id="penalty-foul-list" class="pill-grid pill-grid--col"></div>
+    </section>
+
+    <!-- Step 4: Confirm -->
+    <section id="penalty-step-4" class="penalty-step" hidden>
+      <h2 class="step-heading">Confirm</h2>
+      <div id="penalty-summary" class="penalty-summary-box"></div>
+      <button id="penalty-confirm-btn" class="btn btn-danger btn-lg">File Penalty +1</button>
+      <button id="penalty-cancel-btn" class="btn btn-ghost">Cancel</button>
+    </section>
+  </div>
+
+  <!-- ── Host Panel (overlay, host-only) ──────────────────────────────────── -->
+  <div id="host-panel" class="host-panel" hidden>
+    <h2 class="host-title">⚑ Host Controls</h2>
+    <button id="host-reset-btn"  class="btn btn-ghost btn-sm">Reset Round</button>
+    <button id="host-lock-btn"   class="btn btn-danger btn-sm">Lock Final Scores</button>
+    <div id="host-penalties"     class="host-penalty-list"></div>
+    <button id="host-close-btn"  class="btn btn-ghost btn-sm">Close</button>
+  </div>
+
+  <!-- ── Toast container ──────────────────────────────────────────────────── -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- ── Bottom Nav ───────────────────────────────────────────────────────── -->
+  <nav id="bottom-nav" class="bottom-nav" hidden>
+    <button class="nav-tab active" data-view="scorecard">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">My Card</span>
+    </button>
+    <button class="nav-tab" data-view="scoreboard">
+      <span class="nav-icon">🏌️</span>
+      <span class="nav-label">Leaderboard</span>
+    </button>
+    <button class="nav-tab" data-view="penalty">
+      <span class="nav-icon">🚩</span>
+      <span class="nav-label">Penalty</span>
+    </button>
+    <button class="nav-tab nav-tab--host" id="host-tab" hidden data-action="host-panel">
+      <span class="nav-icon">⚑</span>
+      <span class="nav-label">Host</span>
+    </button>
+  </nav>
+
+  <!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+
+  <!-- Firebase (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/Flip.min.js"></script>
+
+  <!-- App -->
+  <script src="js/config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/scorecard.js"></script>
+  <script src="js/scoreboard.js"></script>
+  <script src="js/penalty.js"></script>
+  <script src="js/host.js"></script>
 </body>
 </html>
