@@ -90,10 +90,10 @@ const Host = (() => {
     if (!bar) { Animations.shake(barInput); return; }
 
     try {
-      // Determine next hole number from CONFIG + already-stored custom holes
+      // Determine next hole number from base holes + already-stored custom holes
       const sessionSnap = await DB.sessionRef().get();
       const customHoles = sessionSnap.exists ? (sessionSnap.data().customHoles || []) : [];
-      const allNums     = [...CONFIG.holes, ...customHoles].map(h => h.n);
+      const allNums     = [...App.baseHoles(), ...customHoles].map(h => h.n);
       const nextN       = Math.max(...allNums) + 1;
 
       const newHole = { n: nextN, bar, signature };

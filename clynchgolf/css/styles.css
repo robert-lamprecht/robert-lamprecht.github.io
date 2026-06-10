@@ -186,6 +186,73 @@ body {
 
 .field-wrap input::placeholder { color: var(--gray-mid); }
 
+.field-wrap textarea {
+  display: block;
+  width: 100%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--green-fairway);
+  border-radius: var(--radius);
+  color: var(--cream);
+  font-family: var(--font-mono);
+  font-size: 16px;
+  padding: 12px 16px;
+  outline: none;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+  resize: vertical;
+}
+
+.field-wrap textarea:focus {
+  border-color: var(--gold);
+  background: rgba(255,255,255,0.1);
+}
+
+.field-wrap textarea::placeholder { color: var(--gray-mid); }
+
+.label-optional {
+  font-size: 9px;
+  color: var(--gray-mid);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
+
+/* ── Landing: choose / join / create panels ── */
+
+.landing-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.landing-back {
+  display: block;
+  margin: 14px auto 0;
+}
+
+/* ── Game-created overlay ── */
+
+.game-code-big {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: var(--gold);
+  text-align: center;
+  margin: 10px 0 18px;
+  user-select: all;
+}
+
+.created-pin-note {
+  font-size: 11px;
+  color: var(--gray-mid);
+}
+
+.top-bar-code {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
 .optional {
   font-size: 10px;
   color: var(--gray-mid);

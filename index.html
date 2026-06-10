@@ -2,347 +2,272 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Clynch Bar Crawl Golf</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Robert Lamprecht — Neuroscience &amp; Neural Engineering</title>
+  <meta name="description" content="Robert Lamprecht is a Neuroscience PhD candidate at Emory University building neural recording platforms to study and repair injured spinal circuits.">
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
 
-  <!-- ── View: Landing / Join ─────────────────────────────────────────────── -->
-  <div id="view-landing" class="view active">
-    <div class="landing-inner">
-      <div class="landing-flag">⛳</div>
-      <h1 class="landing-title">Clynch<br>Bar Crawl<br>Golf</h1>
-      <p class="landing-subtitle">5 holes · Atlanta Beltline · Lowest score wins</p>
-
-      <form id="join-form" novalidate>
-        <div class="field-wrap">
-          <label for="input-name">Your name</label>
-          <input id="input-name" type="text" placeholder="e.g. Robert" autocomplete="off" maxlength="24" required>
-        </div>
-        <div class="join-actions">
-          <button type="submit" class="btn btn-primary btn-lg" id="join-btn">Join →</button>
-          <button type="button" class="btn btn-ghost btn-lg"  id="host-btn">Host</button>
-        </div>
-      </form>
-
-      <!-- Host code — revealed when Host is toggled -->
-      <div id="host-code-wrap" class="host-code-section" hidden>
-        <div class="field-wrap">
-          <label for="input-host">Host code</label>
-          <input id="input-host" type="password" placeholder="Enter host code" autocomplete="off" maxlength="30">
-        </div>
-        <button type="button" class="btn btn-gold btn-lg btn-block" id="host-confirm-btn">Confirm as Host →</button>
-      </div>
+  <header class="site-header" id="top">
+    <div class="header-inner">
+      <span class="meta reveal-meta">Robert Lamprecht</span>
+      <span class="meta reveal-meta">Neuroscience · Neural Engineering</span>
+      <span class="meta reveal-meta meta-right"><span id="local-time">--:--:--</span> ATL</span>
     </div>
-  </div>
+  </header>
 
-  <!-- ── Name conflict overlay ──────────────────────────────────────────────── -->
-  <div id="name-conflict" class="name-conflict-overlay" hidden>
-    <div class="name-conflict-inner">
-      <p class="conflict-heading"><span id="conflict-name-display"></span> is already in the game</p>
-      <p class="conflict-sub">Are you rejoining, or is there a different one?</p>
-      <button id="conflict-return-btn" class="btn btn-primary btn-lg btn-block">↩ I'm back — resume my score</button>
-      <button id="conflict-new-btn"    class="btn btn-ghost   btn-lg btn-block">+ Different person, start fresh</button>
-      <button id="conflict-cancel-btn" class="btn-link">← Back</button>
-    </div>
-  </div>
+  <main>
 
-  <!-- ── View: Scorecard ──────────────────────────────────────────────────── -->
-  <div id="view-scorecard" class="view" hidden>
-    <header class="top-bar">
-      <div class="top-bar-actions">
-        <button class="top-bar-rules-btn" id="scorecard-rules-btn">❓ Rules</button>
-        <button class="top-bar-rules-btn" id="scorecard-games-btn">🎉 Games</button>
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <h1 class="hero-name" id="hero-name" aria-label="Robert Lamprecht">
+        <span class="line-mask"><span class="line"><span class="r-trigger" id="r-trigger">R</span>obert</span></span>
+        <span class="line-mask"><span class="line">Lamprecht</span></span>
+      </h1>
+
+      <div class="hero-row">
+        <p class="hero-role reveal-meta">
+          PhD Candidate, Neuroscience<br>
+          Emory University — Atlanta, GA
+        </p>
+        <p class="hero-statement">
+          <span class="line-mask"><span class="line">I build neural recording platforms — from the</span></span>
+          <span class="line-mask"><span class="line">visual cortex to the injured spinal cord.</span></span>
+        </p>
       </div>
-      <span id="player-name-header" class="top-bar-name"></span>
-      <span id="running-total" class="top-bar-score">E</span>
-    </header>
 
-    <main id="hole-cards" class="hole-cards">
-      <!-- Hole cards injected by scorecard.js -->
-    </main>
-  </div>
-
-  <!-- ── View: Scoreboard ─────────────────────────────────────────────────── -->
-  <div id="view-scoreboard" class="view" hidden>
-    <header class="top-bar">
-      <div class="top-bar-actions">
-        <button class="top-bar-rules-btn" id="scoreboard-rules-btn">❓ Rules</button>
-        <button class="top-bar-rules-btn" id="scoreboard-games-btn">🎉 Games</button>
+      <div class="hero-foot">
+        <span class="meta reveal-meta">Scroll</span>
+        <span class="meta reveal-meta meta-right">01 — 05</span>
       </div>
-      <span class="top-bar-name">Leaderboard</span>
-      <span style="min-width:48px"></span><!-- spacer for balance -->
-    </header>
-    <div id="scoreboard-rows" class="scoreboard-rows">
-      <!-- Rows injected by scoreboard.js -->
-    </div>
-
-    <!-- Shout Box (Live Chat Feed) -->
-    <div class="shout-box-wrap">
-      <h3 class="shout-box-title">📢 Live Shouts & Toasts</h3>
-      <div id="shout-box-feed" class="shout-box-feed">
-        <p class="shout-empty">No shouts yet. Be the first to toast!</p>
-      </div>
-      <form id="shout-form" class="shout-form" autocomplete="off">
-        <input id="shout-input" type="text" placeholder="Shout something..." maxlength="60" required>
-        <button type="submit" class="btn btn-primary btn-xs">Shout</button>
-      </form>
-    </div>
-
-    <!-- Winner reveal (shown on session.status === "final") -->
-    <div id="winner-reveal" class="winner-reveal" hidden>
-      <div class="winner-inner">
-        <div class="winner-flag">🏆</div>
-        <h2 class="winner-label">Winner</h2>
-        <p id="winner-name" class="winner-name"></p>
-        <p id="winner-score" class="winner-score"></p>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── View: File a Penalty ─────────────────────────────────────────────── -->
-  <div id="view-penalty" class="view" hidden>
-    <header class="top-bar">
-      <span class="top-bar-name">File a Penalty</span>
-    </header>
-
-    <!-- Step 1: Pick player -->
-    <section id="penalty-step-1" class="penalty-step">
-      <h2 class="step-heading">Who did it?</h2>
-      <div id="penalty-player-list" class="pill-grid"></div>
     </section>
 
-    <!-- Step 2: Pick hole -->
-    <section id="penalty-step-2" class="penalty-step" hidden>
-      <h2 class="step-heading">Which hole?</h2>
-      <div class="hole-btn-grid" id="penalty-hole-grid"></div>
-    </section>
+    <hr class="rule" data-draw>
 
-    <!-- Step 3: Pick foul -->
-    <section id="penalty-step-3" class="penalty-step" hidden>
-      <h2 class="step-heading">What happened?</h2>
-      <div id="penalty-foul-list" class="pill-grid pill-grid--col"></div>
-    </section>
-
-    <!-- Step 4: Confirm -->
-    <section id="penalty-step-4" class="penalty-step" hidden>
-      <h2 class="step-heading">Confirm</h2>
-      <div id="penalty-summary" class="penalty-summary-box"></div>
-      <button id="penalty-confirm-btn" class="btn btn-danger btn-lg">File Penalty +1</button>
-      <button id="penalty-cancel-btn" class="btn btn-ghost">Cancel</button>
-    </section>
-  </div>
-
-  <!-- ── Host Panel (overlay, host-only) ──────────────────────────────────── -->
-  <div id="host-panel" class="host-panel" hidden>
-    <h2 class="host-title">⚑ Host Controls</h2>
-
-    <!-- Round controls -->
-    <div class="host-section">
-      <button id="host-reset-btn" class="btn btn-ghost btn-sm">Reset Round</button>
-      <button id="host-lock-btn"  class="btn btn-danger btn-sm">Lock Final Scores</button>
-    </div>
-
-    <!-- Pending disputes — host approves or denies -->
-    <div class="host-section">
-      <h3 class="host-section-title">⚖️ Pending Disputes</h3>
-      <div id="host-disputes" class="host-penalty-list"></div>
-    </div>
-
-    <!-- All active penalties — host can void directly -->
-    <div class="host-section">
-      <h3 class="host-section-title">📋 Active Penalties</h3>
-      <div id="host-penalties" class="host-penalty-list"></div>
-    </div>
-
-    <!-- Player roster — host can remove -->
-    <div class="host-section">
-      <h3 class="host-section-title">👤 Players</h3>
-      <div id="host-players" class="host-player-list"></div>
-    </div>
-
-    <!-- Add a hole at runtime -->
-    <div class="host-section">
-      <h3 class="host-section-title">⛳ Add Hole</h3>
-      <div class="field-wrap">
-        <label for="host-new-bar">Bar name</label>
-        <input id="host-new-bar" type="text" placeholder="e.g. Ladybird Grove" maxlength="40" autocomplete="off">
+    <!-- ============ 01 ABOUT ============ -->
+    <section class="section" id="about" data-section>
+      <div class="section-label">
+        <span class="meta section-num">01</span>
+        <h2 class="section-title">About</h2>
       </div>
-      <div class="field-wrap">
-        <label for="host-new-sig">Signature challenge</label>
-        <input id="host-new-sig" type="text" placeholder="e.g. Order a mezcal anything" maxlength="60" autocomplete="off">
-      </div>
-      <button id="host-add-hole-btn" class="btn btn-gold btn-sm">+ Add Hole</button>
-    </div>
-
-    <button id="host-close-btn" class="btn btn-ghost btn-sm" style="margin-top:16px">Close</button>
-  </div>
-
-  <!-- ── Rules Overlay ────────────────────────────────────────────────────── -->
-  <div id="rules-overlay" class="rules-overlay" hidden>
-    <div class="rules-header">
-      <h2 class="rules-title">⛳ How to Play</h2>
-      <button id="rules-close-btn" class="rules-close-btn" aria-label="Close rules">✕</button>
-    </div>
-    <div class="rules-content">
-      <section class="rules-section">
-        <h3>Objective</h3>
-        <p>This is a 5-hole bar crawl played by golf rules: <strong>lowest total score wins!</strong> The twist is that the lowest score belongs to whoever drank the most.</p>
-      </section>
-
-      <section class="rules-section">
-        <h3>Scoring Scale (Per Hole)</h3>
-        <table class="rules-table">
-          <thead>
-            <tr>
-              <th>Drinks</th>
-              <th>Golf Term</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>0 drinks</td>
-              <td>Bogey</td>
-              <td>+1</td>
-            </tr>
-            <tr>
-              <td>1 drink</td>
-              <td>Par</td>
-              <td>E (0)</td>
-            </tr>
-            <tr>
-              <td>2 drinks</td>
-              <td>Birdie</td>
-              <td>-1</td>
-            </tr>
-            <tr>
-              <td>3 drinks</td>
-              <td>Eagle</td>
-              <td>-2</td>
-            </tr>
-            <tr>
-              <td>4 drinks</td>
-              <td>Albatross</td>
-              <td>-3</td>
-            </tr>
-            <tr>
-              <td>5+ drinks</td>
-              <td>(Uncapped)</td>
-              <td>-4, -5, etc.</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
-
-      <section class="rules-section">
-        <h3>What Counts as a Drink?</h3>
-        <ul>
-          <li>Any beer, cocktail, or glass of wine.</li>
-          <li>A shot.</li>
-          <li><strong>Buying Colin a drink:</strong> Lowers the score of the buyer only (does not credit Colin's card). Feel free to buy him drinks to lower your score!</li>
+      <div class="section-body">
+        <p class="lede" data-reveal>
+          I'm a neuroscientist and engineer working at the intersection of
+          electrophysiology, biomedical engineering, and pharmacology. I'm drawn to
+          questions where the tools to answer them don't exist yet.
+        </p>
+        <p data-reveal>
+          At Emory, co-mentored by Dr.&nbsp;Nicholas Au Yong and Dr.&nbsp;Alan Emanuel, my
+          research targets <em>spinal shock</em>: the immediate collapse of motor and
+          reflex function after spinal cord injury, a phenomenon that has never been
+          observed at single-neuron resolution. Using a high-density intraspinal
+          recording platform I helped develop, I track living spinal circuits through
+          the moment of injury — and test whether targeted pharmacology can bring
+          them back.
+        </p>
+        <ul class="tag-list" data-reveal>
+          <li>Electrophysiology</li>
+          <li>Neural Interfaces</li>
+          <li>Spinal Stimulation</li>
+          <li>Signal Processing</li>
+          <li>Deep Learning</li>
+          <li>Python</li>
+          <li>MATLAB</li>
+          <li>C++</li>
         </ul>
-      </section>
+      </div>
+    </section>
 
-      <section class="rules-section">
-        <h3>Bonuses (−1 stroke each)</h3>
-        <p>Earn once per hole:</p>
-        <ul>
-          <li><strong>Recruited a stranger:</strong> Convinced a stranger to join the crawl.</li>
-          <li><strong>Won a bar game:</strong> Win any game at the bar.</li>
-          <li><strong>Gave a toast:</strong> Give a toast to the group.</li>
-          <li><strong>Signature challenge:</strong> Complete the specific challenge for that hole.</li>
+    <hr class="rule" data-draw>
+
+    <!-- ============ 02 RESEARCH ============ -->
+    <section class="section" id="research" data-section>
+      <div class="section-label">
+        <span class="meta section-num">02</span>
+        <h2 class="section-title">Research</h2>
+      </div>
+      <div class="section-body">
+
+        <ol class="entry-list">
+          <li class="entry" data-reveal>
+            <span class="entry-when meta">2024 —</span>
+            <div class="entry-main">
+              <h3>Emory University</h3>
+              <p class="entry-role meta">Graduate Researcher · Au Yong &amp; Emanuel Labs</p>
+              <p>
+                Developing a Neuropixels-based intraspinal recording platform and a
+                mouse model of spinal shock — recording hundreds of single units
+                across the lumbar cord during acute injury. Mapping the neural
+                targets of epidural stimulation and building deep-learning pipelines
+                for behavioral analysis of touch.
+              </p>
+            </div>
+          </li>
+
+          <li class="entry" data-reveal>
+            <span class="entry-when meta">2022 — 24</span>
+            <div class="entry-main">
+              <h3>Georgia Institute of Technology</h3>
+              <p class="entry-role meta">Research Technician · Fong Lab</p>
+              <p>
+                Designed and open-sourced a complete platform for synchronized
+                cortical electrophysiology and visual stimulation. Used it to
+                discover ON-pathway-specific cortical potentiation — a finding with
+                implications for treating amblyopia and myopia, now a pending
+                utility patent.
+              </p>
+            </div>
+          </li>
+
+          <li class="entry" data-reveal>
+            <span class="entry-when meta">2021</span>
+            <div class="entry-main">
+              <h3>University of Florida</h3>
+              <p class="entry-role meta">SNIP Fellow · Dale Lab</p>
+              <p>
+                Closed-loop epidural stimulation to restore diaphragm motor output
+                after cervical spinal cord injury — recording and stimulating in the
+                same breath.
+              </p>
+            </div>
+          </li>
+
+          <li class="entry" data-reveal>
+            <span class="entry-when meta">2018 — 22</span>
+            <div class="entry-main">
+              <h3>Wofford College</h3>
+              <p class="entry-role meta">B.S. Computer Science · Neuroscience Concentration</p>
+              <p>
+                Benjamin Wofford Scholar. The quantitative foundation — theory of
+                computation to clinical neuroscience — underneath everything since.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="subsection" data-reveal>
+          <h3 class="subsection-title meta">Selected Work</h3>
+          <ul class="work-list">
+            <li>
+              <span class="work-year meta">2025</span>
+              <span>Methods to Strengthen Visual Pathways — utility patent pending (co-inventor)</span>
+            </li>
+            <li>
+              <span class="work-year meta">2025</span>
+              <span>Contributions of central and peripheral somatosensory components to texture discrimination — SfN Annual Meeting</span>
+            </li>
+            <li>
+              <span class="work-year meta">2024</span>
+              <span>Transient inactivation of ON signaling drives pathway-specific cortical plasticity in mice — SfN Annual Meeting</span>
+            </li>
+            <li>
+              <span class="work-year meta">2023</span>
+              <span>Longitudinal electrophysiological assessment of visual ability in mice — SfN Annual Meeting</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="subsection" data-reveal>
+          <h3 class="subsection-title meta">Honors</h3>
+          <ul class="work-list">
+            <li><span class="work-year meta">2025</span><span>NIH T32 — Training in Systems &amp; Integrative Biology Neuroscience, NINDS</span></li>
+            <li><span class="work-year meta">2025</span><span>Computational Neural Engineering Training Program Scholar, Georgia Tech &amp; Emory</span></li>
+            <li><span class="work-year meta">2018</span><span>Benjamin Wofford Scholarship, Wofford College</span></li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
+    <hr class="rule" data-draw>
+
+    <!-- ============ 03 PROJECTS ============ -->
+    <section class="section" id="projects" data-section>
+      <div class="section-label">
+        <span class="meta section-num">03</span>
+        <h2 class="section-title">Projects</h2>
+      </div>
+      <div class="section-body">
+        <p class="lede placeholder-note" data-reveal>
+          Tinkering, experiments, builds — currently being documented.
+          <span class="meta status-chip">In progress</span>
+        </p>
+      </div>
+    </section>
+
+    <hr class="rule" data-draw>
+
+    <!-- ============ 04 STUDIO ============ -->
+    <section class="section" id="studio" data-section>
+      <div class="section-label">
+        <span class="meta section-num">04</span>
+        <h2 class="section-title">Studio</h2>
+      </div>
+      <div class="section-body">
+        <div class="band" data-reveal>
+          <button class="band-toggle" id="band-toggle" type="button" aria-expanded="false" aria-controls="band-player">
+            <img class="band-art" src="https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02e77c90c0edee2814387aaf1f" alt="kids in the sand — cover art" width="88" height="88" loading="lazy">
+            <span class="band-info">
+              <span class="band-name">kids in the sand</span>
+              <span class="meta band-meta">Listen — Spotify</span>
+            </span>
+            <span class="band-indicator" aria-hidden="true">+</span>
+          </button>
+          <div class="band-player" id="band-player" hidden>
+            <div class="band-player-inner">
+              <iframe data-src="https://open.spotify.com/embed/artist/0inkPqTwKBJ5Cf64j5523w?theme=0"
+                      title="kids in the sand on Spotify"
+                      width="100%" height="352" frameborder="0"
+                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                      loading="lazy"></iframe>
+            </div>
+          </div>
+          <a class="meta band-link" href="https://open.spotify.com/artist/0inkPqTwKBJ5Cf64j5523w" target="_blank" rel="noopener">Open in Spotify ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <hr class="rule" data-draw>
+
+    <!-- ============ 05 CONTACT ============ -->
+    <section class="section" id="contact" data-section>
+      <div class="section-label">
+        <span class="meta section-num">05</span>
+        <h2 class="section-title">Contact</h2>
+      </div>
+      <div class="section-body">
+        <ul class="contact-list">
+          <li data-reveal><a class="contact-link" href="mailto:rlamprechtd@gmail.com"><span class="meta contact-tag">Email</span><span class="contact-value">rlamprechtd@gmail.com</span><span class="contact-arrow" aria-hidden="true">→</span></a></li>
+          <li data-reveal><a class="contact-link" href="https://github.com/robert-lamprecht" target="_blank" rel="noopener"><span class="meta contact-tag">GitHub</span><span class="contact-value">robert-lamprecht</span><span class="contact-arrow" aria-hidden="true">→</span></a></li>
+          <li data-reveal><a class="contact-link" href="https://www.linkedin.com/in/roblamprecht" target="_blank" rel="noopener"><span class="meta contact-tag">LinkedIn</span><span class="contact-value">roblamprecht</span><span class="contact-arrow" aria-hidden="true">→</span></a></li>
+          <li data-reveal><a class="contact-link" href="https://orcid.org/0009-0005-5041-621X" target="_blank" rel="noopener"><span class="meta contact-tag">ORCID</span><span class="contact-value">0009-0005-5041-621X</span><span class="contact-arrow" aria-hidden="true">→</span></a></li>
         </ul>
-      </section>
+      </div>
+    </section>
 
-      <section class="rules-section">
-        <h3>Penalties (+1 stroke each)</h3>
-        <p>Filed by other players (no self-penalizing!):</p>
-        <ul>
-          <li>Spilled a drink.</li>
-          <li>Didn't finish a drink (shots included).</li>
-          <li>Left a bar before the group.</li>
-          <li>Passed on a round everyone else joined.</li>
-        </ul>
-      </section>
+  </main>
 
-      <section class="rules-section">
-        <h3>Disputes & False Filings</h3>
-        <p>If you disagree with a penalty filed against you, you can dispute it. If <strong>2 other players</strong> agree with your dispute, the penalty is voided. However, the player who filed the false penalty receives an automatic <strong>+1 False Filing penalty</strong> on that hole!</p>
-      </section>
-      
-      <section class="rules-section" style="text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.15);">
-        <button id="rules-host-login-btn" class="btn btn-ghost btn-xs">🔑 Host Access</button>
-      </section>
-    </div>
+  <!-- Easter egg: revealed by typing "game" or double-clicking the R -->
+  <div class="hole19" id="hole19" hidden role="dialog" aria-label="Secret found">
+    <span class="meta hole19-label">Secret unlocked</span>
+    <a class="hole19-link" href="clynchgolf/">The 19th Hole — enter the clubhouse →</a>
+    <button class="hole19-close" type="button" aria-label="Close">×</button>
   </div>
 
-  <!-- ── Party Games Overlay ────────────────────────────────────────────────── -->
-  <div id="party-games-overlay" class="games-overlay" hidden>
-    <div class="games-overlay-backdrop" id="games-backdrop"></div>
-    <div class="games-card-container">
-      <div class="games-card" id="games-card">
-        <div class="games-card-badge" id="games-card-badge">TRIVIA</div>
-        <p class="games-card-text" id="games-card-text">Loading game card...</p>
-        <div class="games-card-decor">⛳</div>
-      </div>
-      <div class="games-actions">
-        <button id="games-next-btn" class="btn btn-gold btn-lg">Next Card →</button>
-        <button id="games-close-btn" class="btn btn-ghost btn-sm">Close</button>
-      </div>
-    </div>
-  </div>
+  <footer class="site-footer">
+    <span class="meta">© 2026 Robert Lamprecht</span>
+    <span class="meta">Atlanta, GA</span>
+    <a class="meta back-top" href="#top">Top ↑</a>
+  </footer>
 
-  <!-- ── Toast container ──────────────────────────────────────────────────── -->
-  <div id="toast-container" class="toast-container" aria-live="polite"></div>
-
-  <!-- ── Bottom Nav ───────────────────────────────────────────────────────── -->
-  <nav id="bottom-nav" class="bottom-nav" hidden>
-    <button class="nav-tab active" data-view="scorecard">
-      <span class="nav-icon">📋</span>
-      <span class="nav-label">My Card</span>
-    </button>
-    <button class="nav-tab" data-view="scoreboard">
-      <span class="nav-icon">🏌️</span>
-      <span class="nav-label">Leaderboard</span>
-    </button>
-    <button class="nav-tab" data-view="penalty">
-      <span class="nav-icon">🚩</span>
-      <span class="nav-label">Penalty</span>
-    </button>
-    <button class="nav-tab nav-tab--host" id="host-tab" hidden data-action="host-panel">
-      <span class="nav-icon">⚑</span>
-      <span class="nav-label">Host</span>
-    </button>
-  </nav>
-
-  <!-- ── Scripts ──────────────────────────────────────────────────────────── -->
-
-  <!-- Firebase (v9 compat) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
-  <!-- GSAP -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/Flip.min.js"></script>
-
-  <!-- App -->
-  <script src="js/config.js"></script>
-  <script src="js/firebase.js"></script>
-  <script src="js/scoring.js"></script>
-  <script src="js/animations.js"></script>
-  <script src="js/app.js"></script>
-  <script src="js/scorecard.js"></script>
-  <script src="js/scoreboard.js"></script>
-  <script src="js/penalty.js"></script>
-  <script src="js/host.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>

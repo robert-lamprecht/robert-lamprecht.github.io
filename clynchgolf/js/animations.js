@@ -95,14 +95,12 @@ const Animations = (() => {
     const flag   = document.querySelector('.landing-flag');
     const title  = document.querySelector('.landing-title');
     const sub    = document.querySelector('.landing-subtitle');
-    const form   = document.querySelector('#join-form');
 
     const tl = gsap.timeline();
     tl.from(flag,  { y: -40, opacity: 0, duration: 0.5, ease: 'bounce.out' })
       .from(title, { y: -20, opacity: 0, duration: 0.45, ease: 'power2.out' }, '-=0.1')
       .from(sub,   { y: 12,  opacity: 0, duration: 0.35, ease: 'power2.out' }, '-=0.1')
-      .from('.field-wrap', { y: 16, opacity: 0, stagger: 0.1, duration: 0.35, ease: 'power2.out' }, '-=0.1')
-      .from('.join-actions', { y: 12, opacity: 0, duration: 0.3, ease: 'back.out(1.5)' }, '-=0.05');
+      .from('#landing-choice .btn', { y: 14, opacity: 0, stagger: 0.08, duration: 0.35, ease: 'back.out(1.5)' }, '-=0.05');
     return tl;
   }
 

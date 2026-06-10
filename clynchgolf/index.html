@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Bar Crawl Golf</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- ── View: Landing / Join ─────────────────────────────────────────────── -->
+  <div id="view-landing" class="view active">
+    <div class="landing-inner">
+      <div class="landing-flag">⛳</div>
+      <h1 class="landing-title">Bar<br>Crawl<br>Golf</h1>
+      <p class="landing-subtitle">Golf rules · Lowest score wins · Drink responsibly-ish</p>
+
+      <!-- Step 0: choose join or create -->
+      <div id="landing-choice" class="landing-choice">
+        <button type="button" class="btn btn-primary btn-lg btn-block" id="choice-join-btn">Join a game →</button>
+        <button type="button" class="btn btn-gold btn-lg btn-block" id="choice-create-btn">+ Create a game</button>
+      </div>
+
+      <!-- Join panel -->
+      <form id="join-form" novalidate hidden>
+        <div class="field-wrap">
+          <label for="input-code">Game code</label>
+          <input id="input-code" type="text" placeholder="e.g. XQ4PD" autocomplete="off" autocapitalize="characters" maxlength="10">
+        </div>
+        <div class="field-wrap">
+          <label for="input-name">Your name</label>
+          <input id="input-name" type="text" placeholder="e.g. Robert" autocomplete="off" maxlength="24" required>
+        </div>
+        <div class="join-actions">
+          <button type="submit" class="btn btn-primary btn-lg" id="join-btn">Join →</button>
+          <button type="button" class="btn btn-ghost btn-lg"  id="host-btn">Host</button>
+        </div>
+        <button type="button" class="btn-link landing-back" id="join-back-btn">← Back</button>
+      </form>
+
+      <!-- Host code — revealed when Host is toggled -->
+      <div id="host-code-wrap" class="host-code-section" hidden>
+        <div class="field-wrap">
+          <label for="input-host">Host code / PIN</label>
+          <input id="input-host" type="password" placeholder="Enter host code" autocomplete="off" maxlength="30">
+        </div>
+        <button type="button" class="btn btn-gold btn-lg btn-block" id="host-confirm-btn">Confirm as Host →</button>
+      </div>
+
+      <!-- Create panel -->
+      <form id="create-form" novalidate hidden>
+        <div class="field-wrap">
+          <label for="input-create-name">Your name (you'll be the host)</label>
+          <input id="input-create-name" type="text" placeholder="e.g. Robert" autocomplete="off" maxlength="24" required>
+        </div>
+        <div class="field-wrap">
+          <label for="input-create-title">Game name <span class="label-optional">optional</span></label>
+          <input id="input-create-title" type="text" placeholder="e.g. Beltline Birthday Open" autocomplete="off" maxlength="40">
+        </div>
+        <div class="field-wrap">
+          <label for="input-create-honoree">Guest of honor <span class="label-optional">optional</span></label>
+          <input id="input-create-honoree" type="text" placeholder="e.g. the birthday person's name" autocomplete="off" maxlength="24">
+        </div>
+        <div class="field-wrap">
+          <label for="input-create-bars">Bar stops, one per line <span class="label-optional">optional — blank = 5 holes</span></label>
+          <textarea id="input-create-bars" rows="5" placeholder="Park Tavern&#10;New Realm&#10;Lady Bird"></textarea>
+        </div>
+        <button type="submit" class="btn btn-gold btn-lg btn-block" id="create-btn">Create game →</button>
+        <button type="button" class="btn-link landing-back" id="create-back-btn">← Back</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Game created overlay ──────────────────────────────────────────────── -->
+  <div id="created-overlay" class="name-conflict-overlay" hidden>
+    <div class="name-conflict-inner">
+      <p class="conflict-heading">⛳ Game created!</p>
+      <p class="conflict-sub">Share this code with your players:</p>
+      <p id="created-code" class="game-code-big"></p>
+      <p class="conflict-sub">Host PIN <span class="created-pin-note">(lets a co-host unlock host powers from the Rules screen)</span>: <strong id="created-pin"></strong></p>
+      <button id="created-continue-btn" class="btn btn-primary btn-lg btn-block">Tee off →</button>
+    </div>
+  </div>
+
+  <!-- ── Name conflict overlay ──────────────────────────────────────────────── -->
+  <div id="name-conflict" class="name-conflict-overlay" hidden>
+    <div class="name-conflict-inner">
+      <p class="conflict-heading"><span id="conflict-name-display"></span> is already in the game</p>
+      <p class="conflict-sub">Are you rejoining, or is there a different one?</p>
+      <button id="conflict-return-btn" class="btn btn-primary btn-lg btn-block">↩ I'm back — resume my score</button>
+      <button id="conflict-new-btn"    class="btn btn-ghost   btn-lg btn-block">+ Different person, start fresh</button>
+      <button id="conflict-cancel-btn" class="btn-link">← Back</button>
+    </div>
+  </div>
+
+  <!-- ── View: Scorecard ──────────────────────────────────────────────────── -->
+  <div id="view-scorecard" class="view" hidden>
+    <header class="top-bar">
+      <div class="top-bar-actions">
+        <button class="top-bar-rules-btn" id="scorecard-rules-btn">❓ Rules</button>
+        <button class="top-bar-rules-btn" id="scorecard-games-btn">🎉 Games</button>
+      </div>
+      <span id="player-name-header" class="top-bar-name"></span>
+      <span id="running-total" class="top-bar-score">E</span>
+    </header>
+
+    <main id="hole-cards" class="hole-cards">
+      <!-- Hole cards injected by scorecard.js -->
+    </main>
+  </div>
+
+  <!-- ── View: Scoreboard ─────────────────────────────────────────────────── -->
+  <div id="view-scoreboard" class="view" hidden>
+    <header class="top-bar">
+      <div class="top-bar-actions">
+        <button class="top-bar-rules-btn" id="scoreboard-rules-btn">❓ Rules</button>
+        <button class="top-bar-rules-btn" id="scoreboard-games-btn">🎉 Games</button>
+      </div>
+      <span class="top-bar-name">Leaderboard</span>
+      <span class="top-bar-score top-bar-code" id="game-code-display" style="min-width:48px"></span>
+    </header>
+    <div id="scoreboard-rows" class="scoreboard-rows">
+      <!-- Rows injected by scoreboard.js -->
+    </div>
+
+    <!-- Shout Box (Live Chat Feed) -->
+    <div class="shout-box-wrap">
+      <h3 class="shout-box-title">📢 Live Shouts & Toasts</h3>
+      <div id="shout-box-feed" class="shout-box-feed">
+        <p class="shout-empty">No shouts yet. Be the first to toast!</p>
+      </div>
+      <form id="shout-form" class="shout-form" autocomplete="off">
+        <input id="shout-input" type="text" placeholder="Shout something..." maxlength="60" required>
+        <button type="submit" class="btn btn-primary btn-xs">Shout</button>
+      </form>
+    </div>
+
+    <!-- Winner reveal (shown on session.status === "final") -->
+    <div id="winner-reveal" class="winner-reveal" hidden>
+      <div class="winner-inner">
+        <div class="winner-flag">🏆</div>
+        <h2 class="winner-label">Winner</h2>
+        <p id="winner-name" class="winner-name"></p>
+        <p id="winner-score" class="winner-score"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── View: File a Penalty ─────────────────────────────────────────────── -->
+  <div id="view-penalty" class="view" hidden>
+    <header class="top-bar">
+      <span class="top-bar-name">File a Penalty</span>
+    </header>
+
+    <!-- Step 1: Pick player -->
+    <section id="penalty-step-1" class="penalty-step">
+      <h2 class="step-heading">Who did it?</h2>
+      <div id="penalty-player-list" class="pill-grid"></div>
+    </section>
+
+    <!-- Step 2: Pick hole -->
+    <section id="penalty-step-2" class="penalty-step" hidden>
+      <h2 class="step-heading">Which hole?</h2>
+      <div class="hole-btn-grid" id="penalty-hole-grid"></div>
+    </section>
+
+    <!-- Step 3: Pick foul -->
+    <section id="penalty-step-3" class="penalty-step" hidden>
+      <h2 class="step-heading">What happened?</h2>
+      <div id="penalty-foul-list" class="pill-grid pill-grid--col"></div>
+    </section>
+
+    <!-- Step 4: Confirm -->
+    <section id="penalty-step-4" class="penalty-step" hidden>
+      <h2 class="step-heading">Confirm</h2>
+      <div id="penalty-summary" class="penalty-summary-box"></div>
+      <button id="penalty-confirm-btn" class="btn btn-danger btn-lg">File Penalty +1</button>
+      <button id="penalty-cancel-btn" class="btn btn-ghost">Cancel</button>
+    </section>
+  </div>
+
+  <!-- ── Host Panel (overlay, host-only) ──────────────────────────────────── -->
+  <div id="host-panel" class="host-panel" hidden>
+    <h2 class="host-title">⚑ Host Controls</h2>
+
+    <!-- Round controls -->
+    <div class="host-section">
+      <button id="host-reset-btn" class="btn btn-ghost btn-sm">Reset Round</button>
+      <button id="host-lock-btn"  class="btn btn-danger btn-sm">Lock Final Scores</button>
+    </div>
+
+    <!-- Pending disputes — host approves or denies -->
+    <div class="host-section">
+      <h3 class="host-section-title">⚖️ Pending Disputes</h3>
+      <div id="host-disputes" class="host-penalty-list"></div>
+    </div>
+
+    <!-- All active penalties — host can void directly -->
+    <div class="host-section">
+      <h3 class="host-section-title">📋 Active Penalties</h3>
+      <div id="host-penalties" class="host-penalty-list"></div>
+    </div>
+
+    <!-- Player roster — host can remove -->
+    <div class="host-section">
+      <h3 class="host-section-title">👤 Players</h3>
+      <div id="host-players" class="host-player-list"></div>
+    </div>
+
+    <!-- Add a hole at runtime -->
+    <div class="host-section">
+      <h3 class="host-section-title">⛳ Add Hole</h3>
+      <div class="field-wrap">
+        <label for="host-new-bar">Bar name</label>
+        <input id="host-new-bar" type="text" placeholder="e.g. Ladybird Grove" maxlength="40" autocomplete="off">
+      </div>
+      <div class="field-wrap">
+        <label for="host-new-sig">Signature challenge</label>
+        <input id="host-new-sig" type="text" placeholder="e.g. Order a mezcal anything" maxlength="60" autocomplete="off">
+      </div>
+      <button id="host-add-hole-btn" class="btn btn-gold btn-sm">+ Add Hole</button>
+    </div>
+
+    <button id="host-close-btn" class="btn btn-ghost btn-sm" style="margin-top:16px">Close</button>
+  </div>
+
+  <!-- ── Rules Overlay ────────────────────────────────────────────────────── -->
+  <div id="rules-overlay" class="rules-overlay" hidden>
+    <div class="rules-header">
+      <h2 class="rules-title">⛳ How to Play</h2>
+      <button id="rules-close-btn" class="rules-close-btn" aria-label="Close rules">✕</button>
+    </div>
+    <div class="rules-content">
+      <section class="rules-section">
+        <h3>Objective</h3>
+        <p>This is a bar crawl played by golf rules: <strong>lowest total score wins!</strong> The twist is that the lowest score belongs to whoever drank the most.</p>
+      </section>
+
+      <section class="rules-section">
+        <h3>Scoring Scale (Per Hole)</h3>
+        <table class="rules-table">
+          <thead>
+            <tr>
+              <th>Drinks</th>
+              <th>Golf Term</th>
+              <th>Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0 drinks</td>
+              <td>Bogey</td>
+              <td>+1</td>
+            </tr>
+            <tr>
+              <td>1 drink</td>
+              <td>Par</td>
+              <td>E (0)</td>
+            </tr>
+            <tr>
+              <td>2 drinks</td>
+              <td>Birdie</td>
+              <td>-1</td>
+            </tr>
+            <tr>
+              <td>3 drinks</td>
+              <td>Eagle</td>
+              <td>-2</td>
+            </tr>
+            <tr>
+              <td>4 drinks</td>
+              <td>Albatross</td>
+              <td>-3</td>
+            </tr>
+            <tr>
+              <td>5+ drinks</td>
+              <td>(Uncapped)</td>
+              <td>-4, -5, etc.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="rules-section">
+        <h3>What Counts as a Drink?</h3>
+        <ul>
+          <li>Any beer, cocktail, or glass of wine.</li>
+          <li>A shot.</li>
+          <li id="rules-honoree-line"><strong>Buying <span class="rules-honoree-name">the guest of honor</span> a drink:</strong> Lowers the score of the buyer only (does not credit their card). Feel free to buy them drinks to lower your score!</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Bonuses (−1 stroke each)</h3>
+        <p>Earn once per hole:</p>
+        <ul>
+          <li><strong>Recruited a stranger:</strong> Convinced a stranger to join the crawl.</li>
+          <li><strong>Won a bar game:</strong> Win any game at the bar.</li>
+          <li><strong>Gave a toast:</strong> Give a toast to the group.</li>
+          <li><strong>Signature challenge:</strong> Complete the specific challenge for that hole.</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Penalties (+1 stroke each)</h3>
+        <p>Filed by other players (no self-penalizing!):</p>
+        <ul>
+          <li>Spilled a drink.</li>
+          <li>Didn't finish a drink (shots included).</li>
+          <li>Left a bar before the group.</li>
+          <li>Passed on a round everyone else joined.</li>
+        </ul>
+      </section>
+
+      <section class="rules-section">
+        <h3>Disputes & False Filings</h3>
+        <p>If you disagree with a penalty filed against you, you can dispute it. If <strong>2 other players</strong> agree with your dispute, the penalty is voided. However, the player who filed the false penalty receives an automatic <strong>+1 False Filing penalty</strong> on that hole!</p>
+      </section>
+      
+      <section class="rules-section" style="text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px dashed rgba(255,255,255,0.15);">
+        <button id="rules-host-login-btn" class="btn btn-ghost btn-xs">🔑 Host Access</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- ── Party Games Overlay ────────────────────────────────────────────────── -->
+  <div id="party-games-overlay" class="games-overlay" hidden>
+    <div class="games-overlay-backdrop" id="games-backdrop"></div>
+    <div class="games-card-container">
+      <div class="games-card" id="games-card">
+        <div class="games-card-badge" id="games-card-badge">TRIVIA</div>
+        <p class="games-card-text" id="games-card-text">Loading game card...</p>
+        <div class="games-card-decor">⛳</div>
+      </div>
+      <div class="games-actions">
+        <button id="games-next-btn" class="btn btn-gold btn-lg">Next Card →</button>
+        <button id="games-close-btn" class="btn btn-ghost btn-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Toast container ──────────────────────────────────────────────────── -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- ── Bottom Nav ───────────────────────────────────────────────────────── -->
+  <nav id="bottom-nav" class="bottom-nav" hidden>
+    <button class="nav-tab active" data-view="scorecard">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">My Card</span>
+    </button>
+    <button class="nav-tab" data-view="scoreboard">
+      <span class="nav-icon">🏌️</span>
+      <span class="nav-label">Leaderboard</span>
+    </button>
+    <button class="nav-tab" data-view="penalty">
+      <span class="nav-icon">🚩</span>
+      <span class="nav-label">Penalty</span>
+    </button>
+    <button class="nav-tab nav-tab--host" id="host-tab" hidden data-action="host-panel">
+      <span class="nav-icon">⚑</span>
+      <span class="nav-label">Host</span>
+    </button>
+  </nav>
+
+  <!-- ── Scripts ──────────────────────────────────────────────────────────── -->
+
+  <!-- Firebase (v9 compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <!-- GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/Flip.min.js"></script>
+
+  <!-- App -->
+  <script src="js/config.js"></script>
+  <script src="js/firebase.js"></script>
+  <script src="js/scoring.js"></script>
+  <script src="js/animations.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/scorecard.js"></script>
+  <script src="js/scoreboard.js"></script>
+  <script src="js/penalty.js"></script>
+  <script src="js/host.js"></script>
+</body>
+</html>

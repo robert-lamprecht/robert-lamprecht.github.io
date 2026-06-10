@@ -2,14 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Session document + all subcollections (feed, etc.) ────────────────────
-    // Scoped to the single known session to limit blast radius.
-    match /sessions/clynch {
-      allow read, write: if true;
+    // ── Games (sessions) + all subcollections (players, feed, etc.) ────────────
+    // Anyone with a game code can read/write that game — this is a trust-based
+    // party game with no auth. Game ids are short codes; cap the id length so
+    // arbitrary paths elsewhere in the database stay untouchable.
+    match /sessions/{gameId} {
+      allow read, write: if gameId.size() <= 12;
     }
 
-    match /sessions/clynch/{collection}/{document=**} {
-      allow read, write: if true;
+    match /sessions/{gameId}/{collection}/{document=**} {
+      allow read, write: if gameId.size() <= 12;
     }
 
   }

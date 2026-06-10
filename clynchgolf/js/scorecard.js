@@ -30,7 +30,7 @@ const Scorecard = (() => {
     container.innerHTML = '';
     _renderedHoleNs.clear();
 
-    CONFIG.holes.forEach(hole => {
+    App.baseHoles().forEach(hole => {
       _renderedHoleNs.add(hole.n);
       const card = document.createElement('div');
       card.className = 'hole-card';
@@ -40,8 +40,8 @@ const Scorecard = (() => {
     });
 
     Animations.staggerIn(document.querySelectorAll('.hole-card'), 0.1);
-    // Bind events for all CONFIG holes at once
-    CONFIG.holes.forEach(hole => bindCardForHole(hole.n));
+    // Bind events for all base holes at once
+    App.baseHoles().forEach(hole => bindCardForHole(hole.n));
   }
 
   // ── Card HTML template (shared by buildCards + appendCard) ───────────────────
@@ -64,12 +64,13 @@ const Scorecard = (() => {
         </div>
       </div>
 
+      ${App.honoreeName() ? `
       <div class="drink-row">
         <button class="btn btn-gold btn-sm btn-block" data-hole="${hole.n}" data-action="colin">
-          🍺 Buy Colin a drink
+          🍺 Buy ${App.honoreeName()} a drink
         </button>
         <span class="colin-count" id="colin-val-${hole.n}" hidden>×0</span>
-      </div>
+      </div>` : ''}
 
       <div class="bonus-row">
         <span class="bonus-label">Bonuses</span>
@@ -242,9 +243,9 @@ const Scorecard = (() => {
 
       const { holes = {} } = snap.data();
 
-      // Process all holes present in the player doc (CONFIG + any custom ones added at runtime)
+      // Process all holes present in the player doc (base + any custom ones added at runtime)
       const allNs = new Set([
-        ...CONFIG.holes.map(h => h.n),
+        ...App.baseHoles().map(h => h.n),
         ...Object.keys(holes).map(Number),
       ]);
 

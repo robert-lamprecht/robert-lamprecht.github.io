@@ -84,7 +84,7 @@ const CONFIG = {
     { cat: 'dare',   q: "High-five three people you don't know who are wearing green." },
     { cat: 'dare',   q: "Order your next drink while talking like a golf commentator." },
     { cat: 'dare',   q: "Do a dramatic slow-motion golf swing right now." },
-    { cat: 'dare',   q: "Find someone not in our group and convince them to wish Colin a happy birthday." },
+    { cat: 'dare',   q: "Find someone not in our group and convince them to toast your group." },
     { cat: 'dare',   q: "Take a photo with a dog on the Beltline (must ask owner first!)." },
     { cat: 'dare',   q: "Serenade a drink of your choice with a short love song." }
   ],

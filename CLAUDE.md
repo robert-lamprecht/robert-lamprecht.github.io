@@ -1,16 +1,47 @@
-# CLAUDE.md — Agent Working Rules for Beltline Bar Crawl Golf
+# CLAUDE.md — Agent Working Rules
 
-This file governs how AI agents should work on this project.
-**Read this file and `Instructions/SPEC_1.md` before making any changes.**
+This repo hosts **two sites** on GitHub Pages (user site, deploys from `main` root):
+
+1. **Portfolio (root `/`)** — Robert Lamprecht's personal portfolio. Light Swiss minimal
+   design. See "Portfolio" section below.
+2. **Beltline Bar Crawl Golf (`/clynchgolf/`)** — real-time golf scorecard game.
+   Unlisted: fully playable at its URL but never linked from the portfolio.
+   **Read `Instructions/SPEC_1.md` before changing any game logic.**
+
+Shared rules for both sites: vanilla JS only, no framework, no build step, GSAP for animation.
 
 ---
 
-## Project Identity
+## Portfolio (root)
+
+- **Files:** `index.html`, `css/main.css`, `js/main.js`
+- **Design:** Light Swiss minimal — off-white paper (`#fafaf7`), ink (`#161613`),
+  hairlines (`#d8d8d0`), single accent (`#e2421f`). Strict grid, numbered sections,
+  sticky section titles, mono uppercase metadata.
+- **Type:** Archivo (display) + IBM Plex Mono (metadata). Playfair Display / DM Mono
+  belong to the game's identity — do not use them on the portfolio.
+- **Animation:** GSAP 3.12 + ScrollTrigger (CDN). Signature moments only: masked hero
+  line reveals, hairline `scaleX` draws, scroll reveals, contact-row hovers.
+  All JS motion bails out under `prefers-reduced-motion`.
+- **Sections:** 01 About · 02 Research · 03 Projects (placeholder) ·
+  04 Studio (music — kids in the sand) · 05 Contact. Projects gets real content later.
+- **Studio/music:** Robert's band is **kids in the sand** (Spotify artist
+  `0inkPqTwKBJ5Cf64j5523w`). Presented as a Swiss-styled row that GSAP-expands to a
+  lazy-loaded Spotify artist embed (iframe `src` set on first open only). The expand
+  toggle must keep working under `prefers-reduced-motion` (it's bound before the
+  reduced-motion early return in `js/main.js`). Cover art is hot-linked from
+  Spotify's CDN via their oEmbed thumbnail.
+- **Never link the game from the portfolio** without the user's say-so.
+
+---
+
+## Game: Beltline Bar Crawl Golf (`/clynchgolf/`)
 
 - **What:** Mobile-first real-time golf scorecard for a bar crawl on the Atlanta Beltline.
 - **Event:** Colin's birthday. This is time-sensitive — built to be used, not perfected.
 - **Hosted:** GitHub Pages (static). Firebase Firestore for realtime data.
 - **Stack:** Vanilla JS, no framework, no build step. GSAP 3.12+ for all animation.
+- All game asset paths are relative, so the app works unchanged from the subdirectory.
 
 ---
 
@@ -85,18 +116,24 @@ const CONFIG = {
 ## File Map
 
 ```
-index.html          — all views, one file
-css/styles.css      — all styles
-js/config.js        — CONFIG (tunables)
-js/firebase.js      — Firebase init (PASTE CONFIG HERE when available)
-js/scoring.js       — PURE logic, no UI, build first
-js/app.js           — routing, shared state
-js/scorecard.js     — personal scorecard
-js/scoreboard.js    — live board + GSAP Flip
-js/penalty.js       — filing + dispute
-js/host.js          — host powers
-js/animations.js    — GSAP helpers
-Instructions/SPEC_1.md  — source of truth
+index.html                — PORTFOLIO (hero/about/research/projects/studio/contact)
+css/main.css              — portfolio styles
+js/main.js                — portfolio GSAP (hero entrance, ScrollTrigger reveals)
+
+clynchgolf/index.html     — GAME: all views, one file
+clynchgolf/css/styles.css — game styles
+clynchgolf/js/config.js   — CONFIG (tunables)
+clynchgolf/js/firebase.js — Firebase init
+clynchgolf/js/scoring.js  — PURE logic, no UI
+clynchgolf/js/app.js      — routing, shared state
+clynchgolf/js/scorecard.js  — personal scorecard
+clynchgolf/js/scoreboard.js — live board + GSAP Flip
+clynchgolf/js/penalty.js  — filing + dispute
+clynchgolf/js/host.js     — host powers
+clynchgolf/js/animations.js — GSAP helpers
+
+Instructions/SPEC_1.md    — game source of truth
+_archive/                 — earlier portfolio iteration (unused, kept for reference)
 ```
 
 ---

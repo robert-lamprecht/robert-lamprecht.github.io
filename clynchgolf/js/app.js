@@ -19,14 +19,41 @@ const App = (() => {
     playerId:    null,
     playerName:  null,
     isHost:      false,
-    isColin:     false,
-    customHoles: [],   // extra holes added by host at runtime (beyond CONFIG.holes)
+    isColin:     false,   // legacy field name — means "is the guest of honor"
+    gameCode:    'clynch',
+    game:        {},      // session doc data: title, honoreeName, hostPin, holes, …
+    customHoles: [],      // extra holes added by host at runtime (beyond base holes)
     unsubscribers: [],
   };
 
-  // Returns CONFIG holes + any runtime holes added by the host, sorted by hole number.
+  // The game's base hole set: per-game holes from the session doc, falling back
+  // to CONFIG.holes for the legacy clynch game (whose doc predates custom holes).
+  function baseHoles() {
+    return (state.game.holes && state.game.holes.length) ? state.game.holes : CONFIG.holes;
+  }
+
+  // Guest of honor ('' = none). Legacy clynch game defaults to Colin.
+  function honoreeName() {
+    if (state.game.honoreeName !== undefined) return state.game.honoreeName || '';
+    return state.gameCode === 'clynch' ? CONFIG.colinName : '';
+  }
+
+  // Valid host codes: the game's own PIN, plus the legacy master code.
+  function isValidHostCode(code) {
+    return [state.game.hostPin, CONFIG.hostCode].filter(Boolean).includes(code);
+  }
+
+  // Returns base holes + any runtime holes added by the host, sorted by hole number.
   function allHoles() {
-    return [...CONFIG.holes, ...state.customHoles].sort((a, b) => a.n - b.n);
+    return [...baseHoles(), ...state.customHoles].sort((a, b) => a.n - b.n);
+  }
+
+  // Generates a 5-char game code without ambiguous characters (no I/L/O/0/1).
+  function generateGameCode() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 5; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
   }
 
   // ── Pending join (lives across the name-conflict modal interaction) ───────────
@@ -46,10 +73,11 @@ const App = (() => {
     localStorage.setItem('playerName', name);
     localStorage.setItem('isHost',     String(isHost));
     localStorage.setItem('isColin',    String(isColin));
+    localStorage.setItem('gameCode',   state.gameCode);
   }
 
   function clearLocalPlayer() {
-    ['playerId', 'playerName', 'isHost', 'isColin'].forEach(k => localStorage.removeItem(k));
+    ['playerId', 'playerName', 'isHost', 'isColin', 'gameCode'].forEach(k => localStorage.removeItem(k));
   }
 
   // ── View routing ─────────────────────────────────────────────────────────────
@@ -85,15 +113,32 @@ const App = (() => {
   // ── Join flow ─────────────────────────────────────────────────────────────────
 
   async function initJoin() {
+    const params = new URLSearchParams(location.search);
+
     // ?reset in URL → clear localStorage and force landing (useful for recovery/testing)
-    if (new URLSearchParams(location.search).has('reset')) {
+    if (params.has('reset')) {
       clearLocalPlayer();
       history.replaceState(null, '', location.pathname);
+    }
+
+    // ?g=CODE → invite link. If it points at a different game than the saved one,
+    // drop the saved identity so the visitor lands on the join panel for that game.
+    const inviteCode = (params.get('g') || '').trim().toUpperCase();
+    const savedCode = localStorage.getItem('gameCode') || 'clynch';
+    if (inviteCode && inviteCode !== savedCode.toUpperCase()) {
+      clearLocalPlayer();
     }
 
     const savedId = localStorage.getItem('playerId');
 
     if (savedId) {
+      // Point all DB refs at the saved game and load its doc before verifying the player.
+      state.gameCode = savedCode;
+      DB.setSessionId(savedCode);
+      try {
+        const gameSnap = await DB.sessionRef().get();
+        if (gameSnap.exists) state.game = gameSnap.data() || {};
+      } catch (e) { /* offline — baseHoles()/honoreeName() fall back gracefully */ }
       // Verify the saved player doc still exists in Firestore before auto-joining.
       // Handles stale test data, schema changes, and host resets.
       try {
@@ -134,6 +179,39 @@ const App = (() => {
     // Landing is already visible in the initial HTML — just wire up events
     Animations.landingEntrance();
 
+    const choiceEl  = document.getElementById('landing-choice');
+    const joinForm  = document.getElementById('join-form');
+    const createForm = document.getElementById('create-form');
+    const hostWrap  = document.getElementById('host-code-wrap');
+
+    function showPanel(which) {
+      choiceEl.hidden   = which !== 'choice';
+      joinForm.hidden   = which !== 'join';
+      createForm.hidden = which !== 'create';
+      if (which !== 'join') hostWrap.hidden = true;
+      const visible = which === 'choice' ? choiceEl : (which === 'join' ? joinForm : createForm);
+      gsap.fromTo(visible, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' });
+    }
+
+    document.getElementById('choice-join-btn').addEventListener('click', () => {
+      showPanel('join');
+      document.getElementById('input-code')?.focus();
+    });
+    document.getElementById('choice-create-btn').addEventListener('click', () => {
+      showPanel('create');
+      document.getElementById('input-create-name')?.focus();
+    });
+    document.getElementById('join-back-btn').addEventListener('click', () => showPanel('choice'));
+    document.getElementById('create-back-btn').addEventListener('click', () => showPanel('choice'));
+
+    // Invite link → jump straight to the join panel with the code filled in
+    const inviteCode = (new URLSearchParams(location.search).get('g') || '').trim().toUpperCase();
+    if (inviteCode) {
+      document.getElementById('input-code').value = inviteCode;
+      showPanel('join');
+      document.getElementById('input-name')?.focus();
+    }
+
     let _hostMode = false;
 
     document.getElementById('host-btn').addEventListener('click', () => {
@@ -150,6 +228,16 @@ const App = (() => {
 
     document.getElementById('host-confirm-btn').addEventListener('click', () => handleJoin(true));
 
+    document.getElementById('create-form').addEventListener('submit', e => {
+      e.preventDefault();
+      handleCreate();
+    });
+
+    document.getElementById('created-continue-btn').addEventListener('click', () => {
+      const overlay = document.getElementById('created-overlay');
+      gsap.to(overlay, { opacity: 0, y: 10, duration: 0.2, ease: 'power2.in', onComplete: () => { overlay.hidden = true; } });
+    });
+
     document.getElementById('conflict-return-btn').addEventListener('click', () => {
       if (_pendingReturn) joinAsReturning(_pendingReturn);
     });
@@ -163,16 +251,42 @@ const App = (() => {
 
   async function handleJoin(isHost) {
     const nameInput = document.getElementById('input-name');
+    const codeInput = document.getElementById('input-code');
     const name = nameInput.value.trim();
+    let code = (codeInput?.value || '').trim().toUpperCase();
+    if (code.toLowerCase() === 'clynch') code = 'clynch'; // legacy game id is lowercase
+
+    if (!code) {
+      Animations.shake(codeInput);
+      Animations.showToast('Enter a game code.', 'error');
+      return;
+    }
 
     if (!name) {
       Animations.shake(nameInput);
       return;
     }
 
+    // Resolve the game before anything else touches Firestore
+    try {
+      const gameSnap = await DB.gameRef(code).get();
+      if (!gameSnap.exists) {
+        Animations.shake(codeInput);
+        Animations.showToast('Game not found — check the code.', 'error');
+        return;
+      }
+      state.gameCode = code;
+      state.game = gameSnap.data() || {};
+      DB.setSessionId(code);
+    } catch (e) {
+      console.error('Game lookup error:', e);
+      Animations.showToast('Could not reach the course — check connection.', 'error');
+      return;
+    }
+
     if (isHost) {
       const hostInput = document.getElementById('input-host');
-      if ((hostInput?.value.trim() || '') !== CONFIG.hostCode) {
+      if (!isValidHostCode(hostInput?.value.trim() || '')) {
         Animations.shake(hostInput);
         Animations.showToast('Wrong host code.', 'error');
         return;
@@ -206,17 +320,21 @@ const App = (() => {
     hideConflict();
 
     const playerId = generateUUID();
-    
-    // Check if a Colin already exists to ensure exactly one player is flagged isColin
-    const colinSnap = await DB.playersRef().where('isColin', '==', true).get();
-    const isColin = name.toLowerCase() === CONFIG.colinName.toLowerCase() && colinSnap.empty;
+
+    // Guest-of-honor crown: name match against this game's honoree, exactly one allowed
+    const honoree = honoreeName();
+    let isColin = false;
+    if (honoree && name.toLowerCase() === honoree.toLowerCase()) {
+      const colinSnap = await DB.playersRef().where('isColin', '==', true).get();
+      isColin = colinSnap.empty;
+    }
 
     // Include any holes already added by the host before this player joined
     const sessionSnap = await DB.sessionRef().get();
     const existingCustom = sessionSnap.exists ? (sessionSnap.data().customHoles || []) : [];
 
     const holes = {};
-    CONFIG.holes.forEach(h => { holes[h.n] = scoring.emptyHole(); });
+    baseHoles().forEach(h => { holes[h.n] = scoring.emptyHole(); });
     existingCustom.forEach(h => { holes[h.n] = scoring.emptyHole(); });
 
     const playerData = { name, isColin, isHost, joinedAt: firebase.firestore.FieldValue.serverTimestamp(), holes };
@@ -238,6 +356,70 @@ const App = (() => {
     } catch (err) {
       console.error('Join error:', err);
       Animations.showToast('Could not join — check connection.', 'error');
+    }
+  }
+
+  // ── Create-a-game flow ────────────────────────────────────────────────────────
+
+  async function handleCreate() {
+    const nameInput = document.getElementById('input-create-name');
+    const name = nameInput.value.trim();
+    if (!name) {
+      Animations.shake(nameInput);
+      return;
+    }
+
+    const title   = document.getElementById('input-create-title').value.trim() || 'Bar Crawl Golf';
+    const honoree = document.getElementById('input-create-honoree').value.trim();
+    const barLines = document.getElementById('input-create-bars').value
+      .split('\n').map(l => l.trim()).filter(Boolean).slice(0, 18);
+
+    // Named bar stops if provided, otherwise five generic holes
+    const holes = barLines.length
+      ? barLines.map((bar, i) => ({ n: i + 1, bar, par: 1, signature: '' }))
+      : Array.from({ length: 5 }, (_, i) => ({ n: i + 1, bar: '', par: 1, signature: '' }));
+
+    const hostPin = String(Math.floor(1000 + Math.random() * 9000));
+
+    const createBtn = document.getElementById('create-btn');
+    createBtn.disabled = true;
+
+    try {
+      // Generate a code that isn't already taken (collisions are vanishingly rare)
+      let code = generateGameCode();
+      for (let i = 0; i < 4; i++) {
+        const existing = await DB.gameRef(code).get();
+        if (!existing.exists) break;
+        code = generateGameCode();
+      }
+
+      state.gameCode = code;
+      state.game = { title, honoreeName: honoree, hostPin, holes };
+      DB.setSessionId(code);
+
+      await DB.sessionRef().set({
+        title,
+        honoreeName: honoree,
+        hostPin,
+        holes,
+        status: 'active',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // Creator joins their own game as host
+      await joinAsNew(name, true);
+
+      // Show the share code + host PIN on top of the scorecard
+      document.getElementById('created-code').textContent = code;
+      document.getElementById('created-pin').textContent = hostPin;
+      const overlay = document.getElementById('created-overlay');
+      overlay.hidden = false;
+      gsap.fromTo(overlay, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' });
+    } catch (err) {
+      console.error('Create game error:', err);
+      Animations.showToast('Could not create game — check connection.', 'error');
+    } finally {
+      createBtn.disabled = false;
     }
   }
 
@@ -296,6 +478,23 @@ const App = (() => {
     document.getElementById('player-name-header').textContent = state.playerName;
     if (state.isHost) document.getElementById('host-tab').hidden = false;
     document.getElementById('bottom-nav').hidden = false;
+
+    // Per-game chrome: title, shareable code in the leaderboard bar, honoree rules line
+    if (state.game.title) document.title = state.game.title;
+    const codeEl = document.getElementById('game-code-display');
+    if (codeEl) codeEl.textContent = state.gameCode === 'clynch' ? '' : state.gameCode;
+
+    const honoree = honoreeName();
+    const honoreeLine = document.getElementById('rules-honoree-line');
+    if (honoreeLine) {
+      if (honoree) {
+        honoreeLine.querySelectorAll('.rules-honoree-name').forEach(el => { el.textContent = honoree; });
+        honoreeLine.hidden = false;
+      } else {
+        honoreeLine.hidden = true;
+      }
+    }
+
     showView('scorecard');
 
     listenToSession();
@@ -518,7 +717,7 @@ const App = (() => {
       const code = prompt('Enter Host Code to elevate privileges:');
       if (!code) return;
 
-      if (code.trim() === CONFIG.hostCode) {
+      if (isValidHostCode(code.trim())) {
         if (overlay) Animations.hideRules(overlay);
 
         state.isHost = true;
@@ -562,7 +761,7 @@ const App = (() => {
     initGames();
   }
 
-  return { init, state, showView, allHoles };
+  return { init, state, showView, allHoles, baseHoles, honoreeName };
 })();
 
 // Boot

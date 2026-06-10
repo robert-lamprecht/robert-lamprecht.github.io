@@ -34,10 +34,17 @@ db.enablePersistence({ synchronizeTabs: true })
   });
 
 // ── Session helpers ────────────────────────────────────────────────────────────
+// A "game" is a session doc: sessions/{gameCode}. The legacy Colin's-birthday
+// game lives at sessions/clynch; games created in-app use generated codes.
+// setSessionId() MUST be called before any ref helper once the game is known.
 
-const SESSION_ID = 'clynch';
+let SESSION_ID = 'clynch';
+
+const setSessionId = (code) => { SESSION_ID = code; };
+const getSessionId = () => SESSION_ID;
 
 const sessionRef = () => db.collection('sessions').doc(SESSION_ID);
+const gameRef    = (code) => db.collection('sessions').doc(code);
 const playersRef = () => sessionRef().collection('players');
 const playerRef  = (id) => playersRef().doc(id);
 
@@ -46,4 +53,4 @@ const playerRef  = (id) => playersRef().doc(id);
 // Update a specific hole field via:  playerRef(id).update({ "holes.1.drinks": n })
 // Use these throughout the app — never build paths manually elsewhere.
 
-const DB = { db, sessionRef, playersRef, playerRef, SESSION_ID };
+const DB = { db, sessionRef, gameRef, playersRef, playerRef, setSessionId, getSessionId };
