@@ -20,6 +20,9 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* The hidden attribute must always win, even over elements given a display value */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {

@@ -37,11 +37,32 @@ Shared rules for both sites: vanilla JS only, no framework, no build step, GSAP 
 
 ## Game: Beltline Bar Crawl Golf (`/clynchgolf/`)
 
-- **What:** Mobile-first real-time golf scorecard for a bar crawl on the Atlanta Beltline.
-- **Event:** Colin's birthday. This is time-sensitive — built to be used, not perfected.
+- **What:** Mobile-first real-time golf scorecard for bar crawls. Originally built for
+  Colin's birthday on the Atlanta Beltline; now generalized — anyone can create a game.
 - **Hosted:** GitHub Pages (static). Firebase Firestore for realtime data.
 - **Stack:** Vanilla JS, no framework, no build step. GSAP 3.12+ for all animation.
 - All game asset paths are relative, so the app works unchanged from the subdirectory.
+
+### Multi-game architecture (added 2026-06-10)
+
+- A **game = a session doc** at `sessions/{gameCode}`, carrying `title`, `honoreeName`,
+  `hostPin`, `holes[]`, `status`, `customHoles[]`. The legacy game stays at
+  `sessions/clynch` with no migration: missing fields fall back to CONFIG
+  (`baseHoles()` → `CONFIG.holes`, `honoreeName()` → Colin, host code → `CONFIG.hostCode`).
+- **Create flow:** name + optional title / guest of honor / bar list (one per line,
+  blank = 5 generic holes) → generates a 5-char code (no I/L/O/0/1) + 4-digit host PIN;
+  creator auto-joins as host; overlay shows code + PIN.
+- **Join flow:** game code + name. `?g=CODE` invite links prefill the join panel
+  (and clear a saved identity from a different game).
+- **Honoree:** the `isColin` / `colinDrinks` field names are kept for data compat but
+  mean "guest of honor". The buy-a-drink button only renders when the game has one.
+- **Host access:** game's `hostPin`, or `CONFIG.hostCode` as Robert's master key (works
+  on every game; client-visible — acceptable for a trust-based party game).
+- `DB.setSessionId(code)` must be called before any Firestore ref helper is used.
+- **Easter egg door:** the portfolio reveals a link to `/clynchgolf/` when the visitor
+  types "game" or double-clicks the R in the hero name (plus hold-the-name action
+  potential and a DevTools console greeting). This is the sanctioned way the game is
+  reachable from the portfolio — still no visible link.
 
 ---
 
@@ -144,7 +165,11 @@ _archive/                 — earlier portfolio iteration (unused, kept for refe
 - [x] Firestore database enabled (us-central1, production mode)
 - [x] Web app registered, `firebaseConfig` pasted into `js/firebase.js`
 - [x] Offline persistence enabled in `js/firebase.js`
-- [ ] Firestore security rules deployed (see SPEC §10)  ← deploy before going live
+- [ ] **Updated** Firestore rules deployed — `firestore.rules` was generalized on
+  2026-06-10 from clynch-only to `sessions/{gameId}` (id ≤ 12 chars). The currently
+  deployed rules still block game creation with `permission-denied`. Deploy the new
+  file via Firebase Console → Firestore → Rules (paste) or `firebase deploy --only
+  firestore:rules` before the create-a-game flow can work.
 
 ## Current Build Status
 

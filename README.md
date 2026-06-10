@@ -29,12 +29,16 @@ js/main.js        — GSAP hero entrance, ScrollTrigger reveals, hover micro-int
 
 ## Beltline Bar Crawl Golf (`/clynchgolf/`)
 
-A mobile-first, real-time scorecard web app for a 5-hole bar crawl scored by golf rules.
+A mobile-first, real-time scorecard web app for bar crawls scored by golf rules.
 **Lowest score wins — the lowest score belongs to whoever drank the most.**
-Built for Colin's birthday on the Atlanta Beltline.
+Originally built for Colin's birthday on the Atlanta Beltline, now generalized:
+anyone can create a game (custom bar stops, optional guest of honor) and gets a
+shareable 5-char code + host PIN. Joining takes a name + game code; `?g=CODE`
+invite links prefill the code.
 
-Players join with a name + course code, track drinks/shots/bonuses/penalties per hole,
-and a live scoreboard ranks everyone in real time via Firebase Firestore.
+Players track drinks/shots/bonuses/penalties per hole, and a live scoreboard
+ranks everyone in real time via Firebase Firestore. Each game is a
+`sessions/{gameCode}` doc; the legacy game lives on at `sessions/clynch`.
 
 Full game rules, scoring engine, and data model are documented in `Instructions/SPEC_1.md`.
 **That file is the source of truth** for game logic. Agent working rules are in `CLAUDE.md`.
